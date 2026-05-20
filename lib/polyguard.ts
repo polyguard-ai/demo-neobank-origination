@@ -15,13 +15,51 @@ export const POLYGUARD_SDK_URL =
   process.env.NEXT_PUBLIC_POLYGUARD_SDK_URL ||
   'https://cdn.polyguard.ai/sdk/latest/sdk.js';
 
-export type PolyguardVerifyResponse = {
-  jwt?: string;
-  link_uuid?: string;
-  presence?: { score: string | number };
+/**
+ * Shape of the resolved value from `client.verify(target, rawJwt = true)`.
+ *
+ * The SDK resolves with `{ jwt: <the WebSocket message body> }`. That body is
+ * an OBJECT — not a JWT string — even though the field is named `jwt`. It
+ * contains the decoded verification bundle plus the actual signed JWT in
+ * `raw_jwt`.
+ *
+ * `link_uuid` is NOT a top-level field anywhere in this payload. It is the
+ * last path segment of `redirect_url` (`/success/{link_uuid}`).
+ */
+export type PolyguardJwtBundle = {
+  status?: 'success' | 'failure';
+  reason?: string | null;
   redirect_url?: string;
+  sub?: string;
+  iss?: string;
+  aud?: string;
+  exp?: number;
+  iat?: number;
+  pg_jwt_type?: string;
+  presence?: { score: string | number; [k: string]: unknown };
+  verification?: Record<string, unknown>;
+  jwts?: Record<string, unknown>;
+  raw_jwt?: string;
   [k: string]: unknown;
 };
+
+export type PolyguardVerifyResponse = {
+  jwt?: PolyguardJwtBundle;
+  presence?: { score: string | number };
+  [k: string]: unknown;
+};
+
+/**
+ * Extract the link_uuid from a verify() response. The SDK doesn't surface
+ * link_uuid directly, but the backend embeds it as the last path segment of
+ * `redirect_url` — `/success/{link_uuid}`.
+ */
+export function extractLinkUuid(response: PolyguardVerifyResponse): string | undefined {
+  const redirect = response?.jwt?.redirect_url;
+  if (!redirect || typeof redirect !== 'string') return undefined;
+  const m = redirect.match(/\/success\/([^/?#]+)/);
+  return m?.[1];
+}
 
 export type PolyguardClientConstructor = new (config: {
   appId: string;

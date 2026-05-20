@@ -12,11 +12,16 @@ export type Applicant = {
 
 export type VerificationSnapshot = {
   linkUuid: string;
+  /** Populated immediately from the SDK response. */
+  source: 'sdk' | 'webhook';
+  status?: 'success' | 'failure';
+  reason?: string | null;
+  presence?: { score: string | number; [k: string]: unknown };
+  verification?: Record<string, unknown>;
+  /** Webhook-only fields. */
   affidavitUrl?: string;
   affidavitUuid?: string;
-  verification?: Record<string, unknown>;
   event?: 'trust_check.completed' | 'trust_check.failed';
-  reason?: string | null;
 };
 
 type AppState = {

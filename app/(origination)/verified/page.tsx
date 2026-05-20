@@ -31,8 +31,13 @@ export default function VerifiedPage() {
   }
 
   const v = (verification.verification ?? {}) as Record<string, unknown>;
-  const presence = v.presence as { score?: string | number } | undefined;
+  // Presence may live either on the bundle (from SDK) or inside verification (from webhook).
+  const presence =
+    verification.presence ??
+    (v.presence as { score?: string | number } | undefined);
   const certainty = v.certainty as number | undefined;
+  const awaitingWebhook =
+    verification.source === 'sdk' && !verification.affidavitUrl;
 
   return (
     <PageWithDocs slug="verified">
@@ -89,6 +94,12 @@ export default function VerifiedPage() {
             View Transaction Affidavit
           </Link>
         </div>
+        {awaitingWebhook && (
+          <p className="mt-3 text-xs text-charcoal-soft">
+            The Transaction Affidavit becomes available once the Polyguard
+            webhook arrives (usually within a second or two).
+          </p>
+        )}
       </section>
     </PageWithDocs>
   );

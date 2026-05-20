@@ -7,6 +7,7 @@ import {
   POLYGUARD_APP_ID,
   REQUIRED_PROOFS_FOR_KYC,
   REQUIRED_PROOFS_FOR_REVERIFY,
+  extractLinkUuid,
   type PolyguardVerifyResponse,
 } from '@/lib/polyguard';
 import { loadPolyguardClient } from '@/lib/load-polyguard';
@@ -20,14 +21,17 @@ type Props = {
 };
 
 /**
- * Wraps @polyguard/sdk. Dynamically imports the SDK to keep it out of SSR
- * (the SDK touches `window` and WebSocket at import time). Renders an
- * embedded QR target on desktop; on mobile the SDK auto-swaps to a
- * deep-link button into Polyguard Mobile.
+ * Wraps the Polyguard browser SDK. Dynamically loads it from the CDN to keep
+ * it out of SSR (the SDK touches `window` and WebSocket at import time).
  *
- * After the SDK promise resolves, begins polling our /api/status/:linkUuid
- * endpoint for the webhook payload — the webhook is our source of truth
- * for the verification result, not the JWT.
+ * Two stages once the user completes their Trust Check:
+ *   1. SDK resolves with the full verification bundle. We extract link_uuid
+ *      from the bundle's redirect_url and immediately stash a snapshot in
+ *      Zustand so the next page can render without waiting.
+ *   2. We then poll /api/status/[linkUuid] in the background to pick up the
+ *      affidavit URL from the webhook. This enriches the snapshot but does
+ *      not gate navigation — webhook delivery can lag the SDK resolve by a
+ *      few seconds.
  */
 export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
   const router = useRouter();
@@ -35,14 +39,13 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
   const setVerification = useAppStore((s) => s.setVerification);
 
   const [phase, setPhase] = useState<
-    'idle' | 'loading-sdk' | 'awaiting-scan' | 'awaiting-webhook' | 'done' | 'error'
+    'idle' | 'loading-sdk' | 'awaiting-scan' | 'done' | 'error'
   >('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [presenceScore, setPresenceScore] = useState<string | number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    let pollAbort: AbortController | null = null;
+    let backgroundPoll: AbortController | null = null;
 
     async function run() {
       setPhase('loading-sdk');
@@ -66,38 +69,48 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
         )) as PolyguardVerifyResponse;
 
         if (cancelled) return;
-        if (response?.presence?.score) setPresenceScore(response.presence.score);
 
-        // Pull the link_uuid from the SDK response. Fall back to decoding the
-        // JWT for `link_uuid` if not directly on the response.
-        const linkUuid =
-          (typeof response === 'object' && (response.link_uuid as string)) ||
-          decodeJwtLinkUuid(response?.jwt);
-
-        if (!linkUuid) {
-          throw new Error('Polyguard did not return a link_uuid');
+        const bundle = response?.jwt;
+        if (!bundle || typeof bundle !== 'object') {
+          // Failure path from the SDK returns `{ presence: { score: 'OFFLINE', msg } }`
+          // with no jwt bundle.
+          const offlineMsg =
+            (response as { presence?: { msg?: string } } | undefined)?.presence?.msg;
+          throw new Error(offlineMsg || 'Polyguard returned no verification bundle');
         }
 
-        setPhase('awaiting-webhook');
+        const linkUuid = extractLinkUuid(response);
+        if (!linkUuid) {
+          throw new Error(
+            'Polyguard verification bundle missing redirect_url; could not derive link_uuid',
+          );
+        }
 
-        // Polling only starts AFTER the SDK promise resolves.
-        pollAbort = new AbortController();
-        const snapshot = await pollForWebhook(linkUuid, pollAbort.signal);
-
-        if (cancelled) return;
-
+        const snapshot: VerificationSnapshot = {
+          linkUuid,
+          source: 'sdk',
+          status: bundle.status,
+          reason: bundle.reason ?? null,
+          presence: bundle.presence,
+          verification: bundle.verification,
+        };
         setVerification(snapshot);
         onComplete?.(snapshot);
         setPhase('done');
 
-        if (redirectTo) {
-          router.push(redirectTo);
-        }
+        // Kick off background polling for the webhook (which carries the
+        // affidavit URL). We don't await it — the user advances immediately.
+        backgroundPoll = new AbortController();
+        pollWebhookInBackground(linkUuid, backgroundPoll.signal, (enriched) => {
+          if (cancelled) return;
+          setVerification({ ...snapshot, ...enriched, linkUuid, source: 'webhook' });
+        });
+
+        if (redirectTo) router.push(redirectTo);
       } catch (err: unknown) {
         if (cancelled) return;
         const msg =
           err instanceof Error ? err.message : 'Verification failed unexpectedly';
-        // SDK rejection for user-cancel uses a recognisable message.
         if (/cancel/i.test(msg)) {
           setPhase('idle');
           return;
@@ -111,32 +124,25 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
 
     return () => {
       cancelled = true;
-      pollAbort?.abort();
+      backgroundPoll?.abort();
     };
   }, [mode, redirectTo, onComplete, router, setVerification]);
 
   const showOverlay =
-    phase === 'idle' ||
-    phase === 'loading-sdk' ||
-    phase === 'awaiting-webhook' ||
-    phase === 'error';
+    phase === 'idle' || phase === 'loading-sdk' || phase === 'done' || phase === 'error';
 
   const overlayLabel =
     phase === 'loading-sdk'
       ? 'Loading Polyguard…'
-      : phase === 'awaiting-webhook'
-      ? 'Confirming your Trust Check…'
+      : phase === 'done'
+      ? 'Trust Check verified — continuing…'
       : 'Starting…';
 
   return (
     <div className="card flex flex-col items-center gap-4">
-      {/* SDK owns #pg-qr-target. We never render children into it from React
-          (that would fight the SDK for ownership of the div). Status UI sits
-          in a sibling overlay above the same footprint.
-
-          In embedded mode the SDK does NOT size the target div — its QR SVG
-          inherits the container's box. The target needs explicit dimensions,
-          or the QR collapses to 0x0. */}
+      {/* SDK owns #pg-qr-target. No React children inside (would fight the
+          SDK for the div). The target needs explicit dimensions or the
+          injected QR SVG collapses to 0x0 in embedded mode. */}
       <div className="relative w-[280px] h-[280px] max-w-full flex items-center justify-center">
         <div
           id="pg-qr-target"
@@ -167,19 +173,6 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
             Check.
           </p>
         )}
-        {phase === 'awaiting-webhook' && (
-          <p>
-            Trust Check captured — confirming your signed result with our backend.
-            {presenceScore !== null && (
-              <>
-                <br />
-                <span className="text-xs font-mono">
-                  PG-Presence: {String(presenceScore)}ms
-                </span>
-              </>
-            )}
-          </p>
-        )}
         {phase === 'error' && (
           <div className="text-error">
             <p className="font-medium">Verification failed</p>
@@ -208,60 +201,55 @@ function Spinner({ label }: { label: string }) {
   );
 }
 
-function decodeJwtLinkUuid(jwt?: string): string | undefined {
-  if (!jwt) return undefined;
-  try {
-    const [, payload] = jwt.split('.');
-    if (!payload) return undefined;
-    const padded = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const json = JSON.parse(atob(padded));
-    if (typeof json.link_uuid === 'string') return json.link_uuid;
-    if (typeof json.jti === 'string') return json.jti;
-  } catch {
-    return undefined;
-  }
-  return undefined;
-}
-
 const POLL_INTERVAL_MS = 1000;
-const POLL_TIMEOUT_MS = 60_000;
+const POLL_TIMEOUT_MS = 90_000;
 
-async function pollForWebhook(
+async function pollWebhookInBackground(
   linkUuid: string,
   signal: AbortSignal,
-): Promise<VerificationSnapshot> {
+  onEnriched: (patch: Partial<VerificationSnapshot>) => void,
+): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < POLL_TIMEOUT_MS) {
-    if (signal.aborted) throw new Error('Polling cancelled');
-    const res = await fetch(`/api/status/${encodeURIComponent(linkUuid)}`, {
-      signal,
-      cache: 'no-store',
-    });
-    if (res.status === 200) {
-      const body = await res.json();
-      const data = body?.data ?? {};
-      return {
-        linkUuid,
-        affidavitUrl: data.affidavit_url,
-        affidavitUuid: data.affidavit_uuid,
-        verification: data.verification,
-        event: body.event,
-        reason: data.reason ?? null,
-      };
+    if (signal.aborted) return;
+    try {
+      const res = await fetch(`/api/status/${encodeURIComponent(linkUuid)}`, {
+        signal,
+        cache: 'no-store',
+      });
+      if (res.status === 200) {
+        const body = await res.json();
+        const data = body?.data ?? {};
+        onEnriched({
+          source: 'webhook',
+          event: body.event,
+          status: body.event === 'trust_check.completed' ? 'success' : 'failure',
+          reason: data.reason ?? null,
+          verification: data.verification,
+          affidavitUrl: data.affidavit_url,
+          affidavitUuid: data.affidavit_uuid,
+        });
+        return;
+      }
+    } catch (e) {
+      if ((e as { name?: string }).name === 'AbortError') return;
+      // Transient fetch failure — keep polling.
     }
     await sleep(POLL_INTERVAL_MS, signal);
   }
-  throw new Error(
-    'Timed out waiting for the Polyguard webhook. Check your sandbox webhook configuration.',
-  );
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    if (signal.aborted) return resolve();
     const t = setTimeout(() => resolve(), ms);
-    signal.addEventListener('abort', () => {
-      clearTimeout(t);
-      reject(new Error('aborted'));
-    });
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(t);
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
