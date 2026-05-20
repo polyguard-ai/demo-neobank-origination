@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore, type VerificationSnapshot } from '@/lib/state';
 import {
@@ -33,7 +33,6 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const setVerification = useAppStore((s) => s.setVerification);
-  const targetRef = useRef<HTMLDivElement>(null);
 
   const [phase, setPhase] = useState<
     'idle' | 'loading-sdk' | 'awaiting-scan' | 'awaiting-webhook' | 'done' | 'error'
@@ -116,21 +115,31 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
     };
   }, [mode, redirectTo, onComplete, router, setVerification]);
 
+  const showOverlay =
+    phase === 'idle' ||
+    phase === 'loading-sdk' ||
+    phase === 'awaiting-webhook' ||
+    phase === 'error';
+
+  const overlayLabel =
+    phase === 'loading-sdk'
+      ? 'Loading Polyguard…'
+      : phase === 'awaiting-webhook'
+      ? 'Confirming your Trust Check…'
+      : 'Starting…';
+
   return (
     <div className="card flex flex-col items-center gap-4">
-      <div
-        id="pg-qr-target"
-        ref={targetRef}
-        className="min-h-[280px] min-w-[240px] sm:min-w-[280px] flex items-center justify-center"
-      >
-        {phase === 'loading-sdk' && <Spinner label="Loading Polyguard…" />}
-        {phase === 'awaiting-scan' && !isMobile && (
-          <Spinner label="Preparing your QR code…" />
+      {/* SDK owns #pg-qr-target. We never render children into it from React
+          (that would fight the SDK for ownership of the div). Status UI sits
+          in a sibling overlay above the same footprint. */}
+      <div className="relative min-h-[280px] min-w-[240px] sm:min-w-[280px] flex items-center justify-center">
+        <div id="pg-qr-target" className="flex items-center justify-center" />
+        {showOverlay && phase !== 'error' && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <Spinner label={overlayLabel} />
+          </div>
         )}
-        {phase === 'awaiting-scan' && isMobile && (
-          <Spinner label="Opening Polyguard Mobile…" />
-        )}
-        {phase === 'awaiting-webhook' && <Spinner label="Confirming your Trust Check…" />}
       </div>
 
       <div className="text-center text-sm text-charcoal-soft max-w-prose">

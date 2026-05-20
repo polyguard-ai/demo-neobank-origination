@@ -38,7 +38,10 @@ export function loadPolyguardClient(): Promise<PolyguardClientConstructor> {
     const script = document.createElement('script');
     script.src = POLYGUARD_SDK_URL;
     script.async = true;
-    script.crossOrigin = 'anonymous';
+    // Do NOT set crossOrigin — the Polyguard CDN does not send CORS headers,
+    // and setting crossOrigin would force the browser to enforce them and
+    // block the script. The IIFE bundle works fine as a regular cross-origin
+    // script (we don't need to inspect its content from JS).
     script.dataset.polyguardSdk = '';
     script.addEventListener('load', () => {
       script.dataset.loaded = 'true';
