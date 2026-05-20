@@ -132,9 +132,16 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
     <div className="card flex flex-col items-center gap-4">
       {/* SDK owns #pg-qr-target. We never render children into it from React
           (that would fight the SDK for ownership of the div). Status UI sits
-          in a sibling overlay above the same footprint. */}
-      <div className="relative min-h-[280px] min-w-[240px] sm:min-w-[280px] flex items-center justify-center">
-        <div id="pg-qr-target" className="flex items-center justify-center" />
+          in a sibling overlay above the same footprint.
+
+          In embedded mode the SDK does NOT size the target div — its QR SVG
+          inherits the container's box. The target needs explicit dimensions,
+          or the QR collapses to 0x0. */}
+      <div className="relative w-[280px] h-[280px] max-w-full flex items-center justify-center">
+        <div
+          id="pg-qr-target"
+          className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+        />
         {showOverlay && phase !== 'error' && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <Spinner label={overlayLabel} />
