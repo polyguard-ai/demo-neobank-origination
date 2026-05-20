@@ -1,0 +1,48 @@
+export const meta = {
+  stepNumber: 4,
+  title: 'You\'re verified',
+  summary: 'What just arrived in the webhook, and what each field means.',
+  links: [
+    { label: 'Webhook payload reference', href: 'https://docs.polyguard.ai/webhooks#payload' },
+  ],
+};
+
+## What\'s happening on this page
+
+Polyguard's backend has POSTed an AES-256-GCM-encrypted webhook to `/api/webhook`. We decrypted it server-side, stored it in memory, and the browser fetched it via `/api/status/:linkUuid`. The page renders the verification fields from that payload.
+
+```ts
+type WebhookInner = {
+  event: 'trust_check.completed' | 'trust_check.failed';
+  link_uuid: string;
+  data: {
+    verification: {
+      full_name: string;
+      certainty: number;       // biometric confidence
+      presence: { score: string }; // PG-Presence latency
+      document_type: string;
+      issuing_country: string;
+      hardware_attestation_id: string;
+      // ...
+    };
+    affidavit_url: string;     // presigned URL to the signed PDF
+    affidavit_uuid: string;
+  };
+};
+```
+
+## Why we trust this and not the JWT
+
+The JWT the SDK returns is convenient for UX (it gives us the presence score to display right away). But Beige Bank does not parse or rely on it. Every authorization decision is made against the **webhook payload**, which:
+
+- Is server-to-server, so a hostile browser can't forge it.
+- Is encrypted and authenticated with AES-256-GCM — tampering invalidates the GCM tag.
+- Carries a timestamp we check against a 5-minute replay window.
+
+## Why this matters for fraud
+
+A signed, replay-protected verification record gives you something Legacy KYC doesn't: a moment of cryptographic certainty. If the customer disputes the account later, you can show exactly who was verified, when, on what device, and with what confidence.
+
+## Next stop
+
+We're not done. Continuous verification means we re-run a (much faster) Trust Check at high-stakes moments — like funding. That happens next.

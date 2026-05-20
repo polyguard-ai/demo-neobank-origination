@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: TypeScript
+        run: pnpm typecheck
+
+      - name: ESLint
+        run: pnpm lint
+
+      - name: Positioning lint
+        run: pnpm lint:positioning
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_POLYGUARD_APP_ID: ci-stub
+          NEXT_PUBLIC_POLYGUARD_API_SERVER: api.polyguard.ai
+          POLYGUARD_WEBHOOK_SECRET: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          POLYGUARD_AFFIDAVIT_HOST_ALLOWLIST: polyguard.ai
+        run: pnpm build

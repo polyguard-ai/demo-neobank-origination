@@ -1,0 +1,109 @@
+'use client';
+import Link from 'next/link';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { PageWithDocs } from '@/components/PageWithDocs';
+import { TrustCheckBadge } from '@/components/TrustCheckBadge';
+import { useAppStore } from '@/lib/state';
+import { CheckCircle2 } from 'lucide-react';
+
+export default function VerifiedPage() {
+  const router = useRouter();
+  const verification = useAppStore((s) => s.verification);
+
+  useEffect(() => {
+    if (!verification) {
+      const t = setTimeout(() => router.replace('/verify'), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [verification, router]);
+
+  if (!verification) {
+    return (
+      <PageWithDocs slug="verified">
+        <section className="mx-auto max-w-2xl px-4 sm:px-6 py-8 sm:py-12">
+          <p className="text-charcoal-soft">
+            No verification on file yet — sending you back to verify your identity…
+          </p>
+        </section>
+      </PageWithDocs>
+    );
+  }
+
+  const v = (verification.verification ?? {}) as Record<string, unknown>;
+  const presence = v.presence as { score?: string | number } | undefined;
+  const certainty = v.certainty as number | undefined;
+
+  return (
+    <PageWithDocs slug="verified">
+      <section className="mx-auto max-w-2xl px-4 sm:px-6 py-8 sm:py-12">
+        <TrustCheckBadge label="Trust Check completed" />
+        <h1 className="font-serif text-3xl sm:text-4xl text-charcoal mt-4">
+          You&apos;re verified.
+        </h1>
+        <p className="text-charcoal-soft mt-2 max-w-prose">
+          Polyguard signed off on your identity. Here&apos;s what we received from
+          the webhook — your biometrics never left your phone.
+        </p>
+
+        <div className="card mt-8 space-y-4">
+          <Row
+            label="Status"
+            value={
+              <span className="inline-flex items-center gap-1.5 text-sage-strong font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                {verification.event === 'trust_check.completed' ? 'Completed' : verification.event}
+              </span>
+            }
+          />
+          {certainty !== undefined && (
+            <Row
+              label="Biometric certainty"
+              value={<span className="font-mono">{formatCertainty(certainty)}</span>}
+            />
+          )}
+          {presence?.score !== undefined && (
+            <Row
+              label="PG-Presence"
+              value={<span className="font-mono">{String(presence.score)}ms</span>}
+            />
+          )}
+          {v.document_type !== undefined && (
+            <Row label="Document" value={String(v.document_type ?? '')} />
+          )}
+          {v.issuing_country !== undefined && (
+            <Row label="Issuing country" value={String(v.issuing_country ?? '')} />
+          )}
+          {v.region !== undefined && <Row label="Region" value={String(v.region ?? '')} />}
+        </div>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <Link href="/fund" className="btn-primary w-full sm:w-auto" data-tap>
+            Continue to funding
+          </Link>
+          <Link
+            href={`/admin/affidavit/${verification.linkUuid}`}
+            className="btn-secondary w-full sm:w-auto"
+            data-tap
+          >
+            View Transaction Affidavit
+          </Link>
+        </div>
+      </section>
+    </PageWithDocs>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 border-b border-charcoal/10 pb-3 last:border-0 last:pb-0">
+      <dt className="text-xs uppercase tracking-wider text-charcoal-soft">{label}</dt>
+      <dd className="text-sm text-charcoal">{value}</dd>
+    </div>
+  );
+}
+
+function formatCertainty(c: number): string {
+  if (c <= 1) return (c * 100).toFixed(2) + '%';
+  return c.toFixed(2) + '%';
+}

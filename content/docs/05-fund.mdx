@@ -1,0 +1,34 @@
+export const meta = {
+  stepNumber: 5,
+  title: 'Continuous verification',
+  summary: 'Re-confirming the person at every high-stakes moment, in about 100ms.',
+  links: [
+    { label: 'PG-Presence', href: 'https://polyguard.ai/pg-presence' },
+  ],
+};
+
+## What\'s happening on this page
+
+Before Beige Bank moves any money, we run a second Trust Check — this time with no document scan and no document re-issuance. We just need PG-Presence and device attestation: prove the person is physically at the device they verified with, right now.
+
+```tsx
+const reverify = new PolyguardClient({
+  appId: process.env.NEXT_PUBLIC_POLYGUARD_APP_ID,
+  apiServer: 'api.polyguard.ai',
+  requiredProofs: ['pg_presence', 'pg_attestation_key_id'],
+  scanType: 'single',
+});
+await reverify.verify('pg-qr-target', true);
+```
+
+The user experience is fast: typically under a second from tap to "Trust Check complete."
+
+## Why this is the actual fraud-prevention story
+
+One-time KYC was designed for in-person banking. It assumed that once you knew who was opening the account, you'd know who was using it later. That assumption broke when accounts moved online — credentials get phished, stolen, sold, and reused.
+
+**Continuous verification** rebinds the identity to the action. The person authorizing the wire today must be the same person who opened the account yesterday — proven on the same device, in real time, with PG-Presence.
+
+## What about friction?
+
+A Trust Check at funding sounds like adding friction. In practice, customers who just completed Polyguard Mobile onboarding don't feel a second Trust Check that takes ~1 second. They feel security. And they don't feel the chargeback Beige Bank just avoided.

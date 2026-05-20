@@ -1,0 +1,31 @@
+export const meta = {
+  stepNumber: 6,
+  title: 'The Transaction Affidavit',
+  summary: 'A court-admissible record of who, when, where, and how — for every Trust Check.',
+  links: [
+    { label: 'NY CPLR § 3122-a', href: 'https://www.nysenate.gov/legislation/laws/CVP/3122-A' },
+    { label: 'Transaction Affidavit format', href: 'https://docs.polyguard.ai/affidavits' },
+  ],
+};
+
+## What\'s happening on this page
+
+This is the compliance console — what Beige Bank's risk team and outside counsel see when they need to defend a verification in a dispute, regulator exam, or chargeback hearing.
+
+The **Transaction Affidavit** is a signed PDF generated at the moment of verification and certified under NY CPLR § 3122-a, a New York rule that admits business records into evidence without requiring live testimony from the records custodian. In plain English: this PDF is the testimony.
+
+## What\'s inside the affidavit
+
+- Cryptographic hashes of the verified document.
+- Biometric confidence score (typically 98%+).
+- PG-Presence reading in milliseconds.
+- Hardware attestation key id from Apple AppAttest or Google Play Integrity.
+- Geographic region.
+- ISO timestamp.
+- JWKS-signed JSON Web Token attesting to all of the above.
+
+The PDF itself lives on Polyguard infrastructure and is exposed to you as a presigned URL inside the webhook payload. Beige Bank never stores the affidavit — we just keep the URL.
+
+## Why this matters operationally
+
+Without an affidavit, fraud disputes become a he-said/she-said exercise: did Beige Bank do enough to verify identity? With one, the answer is a signed file with a timestamp and a certainty score. Reg E (unauthorized EFTs), CFPB exams, BSA/AML audits — they all run faster when you can hand over evidence instead of explaining process.

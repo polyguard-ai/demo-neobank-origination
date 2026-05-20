@@ -1,0 +1,47 @@
+export const meta = {
+  stepNumber: 3,
+  title: 'The Trust Check',
+  summary: 'Four lines of code, four factors of identity. This is where Polyguard does its work.',
+  links: [
+    { label: 'PolyguardClient API', href: 'https://docs.polyguard.ai/sdk#client' },
+    { label: 'Set up webhooks', href: 'https://docs.polyguard.ai/webhooks' },
+  ],
+};
+
+## What\'s happening on this page
+
+The page mounts a single client component that loads the Polyguard SDK from `https://cdn.polyguard.ai/sdk/latest/sdk.js` and calls `client.verify()`. On desktop it renders a QR code. On mobile it offers a deep link straight into Polyguard Mobile.
+
+```html
+<script src="https://cdn.polyguard.ai/sdk/latest/sdk.js"></script>
+```
+
+```tsx
+const client = new window.Polyguard.Client({
+  appId: process.env.NEXT_PUBLIC_POLYGUARD_APP_ID,
+  apiServer: 'api.polyguard.ai',
+  requiredProofs: ['name', 'pg_presence', 'pg_attestation_key_id', 'pg_region'],
+  scanType: 'single',
+});
+
+const response = await client.verify('pg-qr-target', /* rawJwt */ true);
+```
+
+That's the whole integration on the browser side. (You can also `npm install @polyguard/sdk` if you'd rather bundle.)
+
+## What Polyguard Mobile does
+
+When the applicant scans the QR (or taps the deep link), Polyguard Mobile runs a fused identity verification — four factors confirmed in a single Trust Check:
+
+1. **Person** — 3D depth facial recognition on the applicant's device.
+2. **Document** — NFC chip verification of the government ID. Not OCR.
+3. **Device** — Apple AppAttest or Google Play Integrity confirms a real, untampered phone.
+4. **Location** — GPS plus PG-Presence optical distance bounding confirms the applicant is physically there, in real time.
+
+Biometric data never leaves the device. Beige Bank never sees it. Polyguard never stores it.
+
+## How we know the result
+
+The SDK returns a JWT and a presence score to the browser, but the **source of truth is the webhook**. Polyguard's backend signs and encrypts the full result, then posts it to your `/api/webhook` endpoint. The browser polls our own `/api/status/:linkUuid` until the webhook lands.
+
+This is on purpose: webhooks are tamper-evident, server-to-server, and easy to audit. Trusting the browser would mean trusting whatever extension the user has installed.

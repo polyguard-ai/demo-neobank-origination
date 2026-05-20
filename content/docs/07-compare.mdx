@@ -1,0 +1,29 @@
+export const meta = {
+  stepNumber: 7,
+  title: 'Legacy KYC vs. Polyguard',
+  summary: 'A capability-by-capability comparison. Why one-time IDV is a 2019 solution.',
+  links: [
+    { label: 'Try Polyguard', href: 'https://polyguard.ai' },
+  ],
+};
+
+## The pattern
+
+Legacy IDV vendors confirm that a document exists and that the photo on it roughly resembles the person on the other end of a selfie. That was a fine answer in 2018, before generative AI made face swapping trivial and before remote-access kits became a commodity.
+
+Polyguard confirms the **person**, the **document**, the **device**, and the **physical presence** — together, in one Trust Check, and then again every time something high-stakes happens.
+
+## Three concrete attacks legacy KYC misses
+
+**Synthetic identity.** Real SSN + invented name + plausible address. Document scans pass, credit bureaus pass. PG-Presence still requires a real face on a real device — synthetic identities don't pass that.
+
+**Account takeover via remote access.** A phishing kit installs a remote-control tool on the customer's machine. Legacy KYC at signup is irrelevant — the original signup was real. Polyguard's continuous verification catches the wire authorization that the legitimate customer never made.
+
+**Deepfake selfie loops.** A pretrained model fakes the liveness selfie. Many vendors race to retrain their classifiers every time a new model drops. Polyguard never relied on the selfie alone; you can't fake the NFC chip on a passport, you can't fake the device attestation, and you can't fake PG-Presence — they all have to line up at once.
+
+## The bottom line
+
+One-time KYC verifies that a credential exists.
+Polyguard verifies the person — every time it matters.
+
+**Try Polyguard.**

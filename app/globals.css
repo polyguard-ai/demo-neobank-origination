@@ -1,0 +1,105 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Beige Bank palette — warm beige + charcoal + sage */
+  --color-beige: #e8dfd2;
+  --color-beige-light: #f4eee4;
+  --color-beige-dark: #d8cdb8;
+  --color-charcoal: #1f2329;
+  --color-charcoal-soft: #3a4049;
+  --color-sage: #6f8c73;
+  --color-sage-strong: #4a6b50;
+  --color-sage-soft: #c8d6cb;
+  --color-warning: #b76e34;
+  --color-error: #a4392c;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Fraunces', ui-serif, Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --breakpoint-xs: 22.5rem; /* 360px */
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--color-beige);
+    color: var(--color-charcoal);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  /* Pre-hydration: reserve right padding on desktop for the docs rail.
+     Once hydrated, [data-docs-collapsed] toggles the width. */
+  @media (min-width: 1024px) {
+    [data-page-content] {
+      padding-right: 380px;
+      transition: padding-right 200ms ease;
+    }
+    html[data-docs-collapsed='true'] [data-page-content] {
+      padding-right: 3rem;
+    }
+    [data-docs-rail] {
+      width: 380px;
+      transition: width 200ms ease;
+    }
+    html[data-docs-collapsed='true'] [data-docs-rail] {
+      width: 3rem;
+    }
+    html[data-docs-collapsed='true'] [data-docs-rail-content] {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-sage-strong);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Tap targets — WCAG 2.5.5 */
+  button,
+  a {
+    min-height: 1px;
+  }
+  @media (pointer: coarse) {
+    button[data-tap],
+    a[data-tap] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-charcoal text-beige-light px-5 py-3 text-sm font-medium tracking-wide hover:bg-charcoal-soft transition-colors;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-charcoal/30 text-charcoal px-5 py-3 text-sm font-medium tracking-wide hover:bg-beige-dark transition-colors;
+  }
+  .btn-sage {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-sage-strong text-beige-light px-5 py-3 text-sm font-medium tracking-wide hover:bg-sage transition-colors;
+  }
+  .card {
+    @apply rounded-xl border border-charcoal/10 bg-beige-light p-5 sm:p-6;
+  }
+  .field-label {
+    @apply block text-xs font-medium uppercase tracking-wider text-charcoal-soft mb-1.5;
+  }
+  .field-input {
+    @apply w-full rounded-md border border-charcoal/20 bg-beige-light px-3 py-3 text-base text-charcoal placeholder:text-charcoal/40 focus:border-sage-strong focus:outline-none;
+  }
+  .hero-title {
+    font-family: var(--font-serif);
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+}
