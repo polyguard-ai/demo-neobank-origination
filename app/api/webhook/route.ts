@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { decryptWebhook, WebhookCryptoError, type WebhookEnvelope } from '@/lib/webhook-crypto';
 import { setPayload } from '@/lib/webhook-store';
 
+function safeHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'invalid-url';
+  }
+}
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -31,12 +39,25 @@ export async function POST(req: Request) {
   try {
     const inner = decryptWebhook(envelope, secret);
     setPayload(inner);
+    const verification = inner.data?.verification ?? {};
     console.log(
       '[webhook] stored payload',
       JSON.stringify({
         event: inner.event,
         link_uuid: inner.link_uuid,
-        has_affidavit: !!inner.data?.affidavit_url,
+        app_id: inner.app_id,
+        timestamp: inner.timestamp,
+        sub: inner.data?.sub,
+        reason: inner.data?.reason ?? null,
+        affidavit_uuid: inner.data?.affidavit_uuid ?? null,
+        affidavit_url_host: inner.data?.affidavit_url
+          ? safeHost(inner.data.affidavit_url)
+          : null,
+        data_keys: Object.keys(inner.data ?? {}),
+        verification_keys: Object.keys(verification),
+        verification_non_null_keys: Object.entries(verification)
+          .filter(([, v]) => v !== null && v !== undefined && v !== '')
+          .map(([k]) => k),
       }),
     );
     return NextResponse.json({ ok: true });
