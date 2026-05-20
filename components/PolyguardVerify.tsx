@@ -45,7 +45,6 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    let backgroundPoll: AbortController | null = null;
 
     async function run() {
       setPhase('loading-sdk');
@@ -86,6 +85,10 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
           );
         }
 
+        // Stash the SDK snapshot and advance immediately. WebhookEnrichment
+        // (mounted in the origination layout) picks it up and polls
+        // /api/status/[linkUuid] in the background — that poll survives this
+        // component unmounting on navigation.
         const snapshot: VerificationSnapshot = {
           linkUuid,
           source: 'sdk',
@@ -97,14 +100,6 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
         setVerification(snapshot);
         onComplete?.(snapshot);
         setPhase('done');
-
-        // Kick off background polling for the webhook (which carries the
-        // affidavit URL). We don't await it — the user advances immediately.
-        backgroundPoll = new AbortController();
-        pollWebhookInBackground(linkUuid, backgroundPoll.signal, (enriched) => {
-          if (cancelled) return;
-          setVerification({ ...snapshot, ...enriched, linkUuid, source: 'webhook' });
-        });
 
         if (redirectTo) router.push(redirectTo);
       } catch (err: unknown) {
@@ -124,7 +119,6 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
 
     return () => {
       cancelled = true;
-      backgroundPoll?.abort();
     };
   }, [mode, redirectTo, onComplete, router, setVerification]);
 
@@ -199,57 +193,4 @@ function Spinner({ label }: { label: string }) {
       <span className="text-sm">{label}</span>
     </div>
   );
-}
-
-const POLL_INTERVAL_MS = 1000;
-const POLL_TIMEOUT_MS = 90_000;
-
-async function pollWebhookInBackground(
-  linkUuid: string,
-  signal: AbortSignal,
-  onEnriched: (patch: Partial<VerificationSnapshot>) => void,
-): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < POLL_TIMEOUT_MS) {
-    if (signal.aborted) return;
-    try {
-      const res = await fetch(`/api/status/${encodeURIComponent(linkUuid)}`, {
-        signal,
-        cache: 'no-store',
-      });
-      if (res.status === 200) {
-        const body = await res.json();
-        const data = body?.data ?? {};
-        onEnriched({
-          source: 'webhook',
-          event: body.event,
-          status: body.event === 'trust_check.completed' ? 'success' : 'failure',
-          reason: data.reason ?? null,
-          verification: data.verification,
-          affidavitUrl: data.affidavit_url,
-          affidavitUuid: data.affidavit_uuid,
-        });
-        return;
-      }
-    } catch (e) {
-      if ((e as { name?: string }).name === 'AbortError') return;
-      // Transient fetch failure — keep polling.
-    }
-    await sleep(POLL_INTERVAL_MS, signal);
-  }
-}
-
-function sleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    if (signal.aborted) return resolve();
-    const t = setTimeout(() => resolve(), ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(t);
-        resolve();
-      },
-      { once: true },
-    );
-  });
 }
