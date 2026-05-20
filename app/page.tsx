@@ -22,7 +22,7 @@ export default function LandingPage() {
             origination — without sacrificing speed.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center">
-            <Link href="/apply" className="btn-primary w-full sm:w-auto" data-tap>
+            <Link href="/verify" className="btn-primary w-full sm:w-auto" data-tap>
               Open my account
             </Link>
             <Link href="/compare" className="btn-secondary w-full sm:w-auto" data-tap>

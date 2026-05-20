@@ -83,8 +83,8 @@ export default function VerifiedPage() {
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
-          <Link href="/fund" className="btn-primary w-full sm:w-auto" data-tap>
-            Continue to funding
+          <Link href="/apply" className="btn-primary w-full sm:w-auto" data-tap>
+            Continue
           </Link>
           <Link
             href={`/admin/affidavit/${verification.linkUuid}`}

@@ -1,7 +1,7 @@
 export const meta = {
-  stepNumber: 3,
+  stepNumber: 2,
   title: 'The Trust Check',
-  summary: 'Four lines of code, four factors of identity. This is where Polyguard does its work.',
+  summary: 'Four lines of code, four factors of identity. This is where Polyguard does its work — before we ask the customer to type anything.',
   links: [
     { label: 'PolyguardClient API', href: 'https://docs.polyguard.ai/sdk#client' },
     { label: 'Set up webhooks', href: 'https://docs.polyguard.ai/webhooks' },
@@ -21,7 +21,7 @@ const client = new window.Polyguard.Client({
   appId: process.env.NEXT_PUBLIC_POLYGUARD_APP_ID,
   apiServer: 'api.polyguard.ai',
   requiredProofs: ['name', 'pg_presence', 'pg_attestation_key_id', 'pg_region'],
-  scanType: 'single',
+  scanType: 'multi',
 });
 
 const response = await client.verify('pg-qr-target', /* rawJwt */ true);
@@ -42,6 +42,8 @@ Biometric data never leaves the device. Beige Bank never sees it. Polyguard neve
 
 ## How we know the result
 
-The SDK returns a JWT and a presence score to the browser, but the **source of truth is the webhook**. Polyguard's backend signs and encrypts the full result, then posts it to your `/api/webhook` endpoint. The browser polls our own `/api/status/:linkUuid` until the webhook lands.
+The SDK resolves the moment the Trust Check completes, with the full verification bundle — name, document type, region, PG-Presence score, biometric certainty. That data is what powers the *next* page, where Beige Bank pre-fills its onboarding form so the customer doesn't have to type their name or address.
 
-This is on purpose: webhooks are tamper-evident, server-to-server, and easy to audit. Trusting the browser would mean trusting whatever extension the user has installed.
+In parallel, Polyguard's backend posts an AES-256-GCM-encrypted webhook to `/api/webhook` carrying the **signed Transaction Affidavit URL**. We poll our own `/api/status/:linkUuid` for that in the background — the user advances immediately; the affidavit just enriches the compliance record when it arrives.
+
+This split is on purpose: the browser response is fast enough for UX, the webhook is tamper-evident enough for the audit trail.

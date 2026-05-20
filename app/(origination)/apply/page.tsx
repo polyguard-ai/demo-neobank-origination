@@ -1,72 +1,91 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import { PageWithDocs } from '@/components/PageWithDocs';
+import { TrustCheckBadge } from '@/components/TrustCheckBadge';
 import { useAppStore } from '@/lib/state';
+import { CheckCircle2 } from 'lucide-react';
+
+function splitFullName(full: string | undefined): { firstName: string; lastName: string } {
+  if (!full) return { firstName: '', lastName: '' };
+  const parts = full.trim().split(/\s+/);
+  if (parts.length <= 1) return { firstName: parts[0] ?? '', lastName: '' };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
 
 export default function ApplyPage() {
   const router = useRouter();
+  const verification = useAppStore((s) => s.verification);
   const setApplicant = useAppStore((s) => s.setApplicant);
   const applicant = useAppStore((s) => s.applicant);
+
+  const [email, setEmail] = useState(applicant.email ?? '');
+  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!verification) router.replace('/verify');
+  }, [verification, router]);
+
+  if (!verification) return null;
+
+  const v = (verification.verification ?? {}) as Record<string, unknown>;
+  const fullName = (v.full_name as string | undefined) ?? '';
+  const { firstName, lastName } = splitFullName(fullName);
+  const region = (v.region as string | undefined) ?? '';
+  const documentType = (v.document_type as string | undefined) ?? '';
+  const issuingCountry = (v.issuing_country as string | undefined) ?? '';
 
   return (
     <PageWithDocs slug="apply">
       <section className="mx-auto max-w-2xl px-4 sm:px-6 py-8 sm:py-12">
-        <h1 className="font-serif text-3xl sm:text-4xl text-charcoal">Tell us about you</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl text-charcoal">
+          Confirm your details
+        </h1>
         <p className="text-charcoal-soft mt-2 max-w-prose">
-          We need a few details before we verify your identity. We&apos;ll only ask
-          once.
+          Polyguard already verified your government ID, so we don&apos;t need to
+          ask for most of this. Just confirm what we know and tell us where to
+          send your statements.
         </p>
 
+        <div className="card mt-8">
+          <div className="flex items-center justify-between">
+            <TrustCheckBadge label="Verified by Polyguard" />
+            <span className="text-[0.7rem] uppercase tracking-wider text-charcoal-soft">
+              From your Trust Check
+            </span>
+          </div>
+          <dl className="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <VerifiedField label="First name" value={firstName || '—'} />
+            <VerifiedField label="Last name" value={lastName || '—'} />
+            <VerifiedField label="Document" value={documentType || '—'} />
+            <VerifiedField label="Issuing country" value={issuingCountry || '—'} />
+            <VerifiedField label="Region" value={region || '—'} />
+          </dl>
+          <p className="mt-4 text-xs text-charcoal-soft">
+            None of this is editable — it&apos;s read from the cryptographic
+            verification, not from form input.
+          </p>
+        </div>
+
         <form
-          className="mt-8 space-y-5"
+          className="mt-6 card space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
             setSubmitting(true);
-            const f = new FormData(e.currentTarget);
             setApplicant({
-              firstName: String(f.get('firstName') || ''),
-              lastName: String(f.get('lastName') || ''),
-              dob: String(f.get('dob') || ''),
-              email: String(f.get('email') || ''),
-              ssnLast4: String(f.get('ssnLast4') || ''),
+              firstName,
+              lastName,
+              email,
+              dob: '',
+              ssnLast4: '',
             });
-            router.push('/verify');
+            router.push('/fund');
           }}
         >
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="firstName" className="field-label">
-                First name
-              </label>
-              <input
-                id="firstName"
-                name="firstName"
-                required
-                autoComplete="given-name"
-                defaultValue={applicant.firstName ?? ''}
-                className="field-input"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="field-label">
-                Last name
-              </label>
-              <input
-                id="lastName"
-                name="lastName"
-                required
-                autoComplete="family-name"
-                defaultValue={applicant.lastName ?? ''}
-                className="field-input"
-              />
-            </div>
-          </div>
-
           <div>
             <label htmlFor="email" className="field-label">
-              Email
+              Email for statements
             </label>
             <input
               id="email"
@@ -75,60 +94,51 @@ export default function ApplyPage() {
               required
               autoComplete="email"
               inputMode="email"
-              defaultValue={applicant.email ?? ''}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
               className="field-input"
             />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="dob" className="field-label">
-                Date of birth
-              </label>
-              <input
-                id="dob"
-                name="dob"
-                type="date"
-                required
-                autoComplete="bday"
-                defaultValue={applicant.dob ?? ''}
-                className="field-input"
-              />
-            </div>
-            <div>
-              <label htmlFor="ssnLast4" className="field-label">
-                Last 4 of SSN
-              </label>
-              <input
-                id="ssnLast4"
-                name="ssnLast4"
-                required
-                pattern="\d{4}"
-                maxLength={4}
-                inputMode="numeric"
-                placeholder="••••"
-                defaultValue={applicant.ssnLast4 ?? ''}
-                className="field-input"
-              />
-            </div>
-          </div>
-
-          <p className="text-xs text-charcoal-soft">
-            Demo only — no real KYC is performed and no data is stored
-            server-side. Form contents live in your browser&apos;s local storage
-            until you reset.
-          </p>
+          <label className="flex items-start gap-3 text-sm text-charcoal-soft">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              required
+              className="mt-1 h-4 w-4 accent-sage-strong"
+            />
+            <span>
+              I agree to the deposit account agreement, electronic-disclosure
+              consent, and Beige Bank&apos;s privacy notice.
+            </span>
+          </label>
 
           <button
             type="submit"
-            disabled={submitting}
-            className="btn-primary w-full sm:w-auto"
+            disabled={submitting || !agreed || !email}
+            className="btn-primary w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
             data-tap
           >
-            Continue to verification
+            Open my account
           </button>
         </form>
       </section>
     </PageWithDocs>
+  );
+}
+
+function VerifiedField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[0.7rem] uppercase tracking-wider text-charcoal-soft">
+        {label}
+      </dt>
+      <dd className="mt-0.5 flex items-center gap-1.5 text-charcoal font-medium">
+        <CheckCircle2 className="h-3.5 w-3.5 text-sage-strong shrink-0" />
+        <span className="truncate">{value}</span>
+      </dd>
+    </div>
   );
 }

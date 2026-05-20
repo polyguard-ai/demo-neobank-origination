@@ -1,0 +1,35 @@
+export const meta = {
+  stepNumber: 4,
+  title: 'Confirm your details',
+  summary: 'Notice how short this form is. That is the point.',
+  links: [
+    { label: 'CIP requirements vs. cryptographic IDV',
+      href: 'https://docs.polyguard.ai/compliance/cip' },
+  ],
+};
+
+## What\'s happening on this page
+
+This is the entire account-opening form. One field — your email. Everything else came from the Trust Check on the previous step.
+
+Compare that to a typical neobank signup: first name, last name, date of birth, residential address, SSN (or last four), employment, source of funds, "is the address you typed the same as the address on your ID?" Each field is an opportunity for drop-off, typos, and synthetic-identity fraud.
+
+## What we *didn\'t* ask you to type
+
+| Field | Where it came from |
+|---|---|
+| First name | Polyguard, from your government ID\'s NFC chip |
+| Last name | Polyguard, same |
+| Date of birth | Implicit in the verified document — we don\'t need to re-collect it |
+| Address / region | `pg_region` proof from your verified device location |
+| Government ID number | `id_verification_id` from the cryptographic ID scan |
+
+## Why this matters
+
+Every field a user *doesn\'t* have to type is a field that can\'t be lied about. Polyguard\'s position is that the strongest CIP signal for a neobank isn\'t name + DOB + SSN matched against a credit bureau — it\'s a real-time NFC verification of the customer\'s actual government ID, on their actual device, in their actual location.
+
+Beige Bank still meets its CIP and BSA/AML obligations — arguably more robustly than the typed-form approach. And the customer experience is one keystroke.
+
+## The data that *did* get stored
+
+Just the email — so we can send statements. Everything we know about the customer\'s identity is in the signed Transaction Affidavit on the next admin page. Beige Bank holds zero biometric data and never received the customer\'s ID number.

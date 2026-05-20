@@ -4,9 +4,9 @@ import { clsx } from 'clsx';
 
 const STOPS = [
   { slug: 'landing', label: 'Welcome', href: '/' },
-  { slug: 'apply', label: 'Your details', href: '/apply' },
   { slug: 'verify', label: 'Verify', href: '/verify' },
   { slug: 'verified', label: 'Verified', href: '/verified' },
+  { slug: 'apply', label: 'Confirm', href: '/apply' },
   { slug: 'fund', label: 'Fund', href: '/fund' },
   { slug: 'affidavit', label: 'Affidavit', href: '#' },
   { slug: 'compare', label: 'Compare', href: '/compare' },
