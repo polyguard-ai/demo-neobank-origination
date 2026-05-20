@@ -12,7 +12,7 @@ export async function GET(
   if (!linkUuid || linkUuid.length > 128) {
     return NextResponse.json({ error: 'bad link_uuid' }, { status: 400 });
   }
-  const payload = getPayload(linkUuid);
+  const payload = await getPayload(linkUuid);
   if (!payload) {
     return new NextResponse(null, { status: 204 });
   }

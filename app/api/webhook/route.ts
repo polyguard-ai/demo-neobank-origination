@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   try {
     const inner = decryptWebhook(envelope, secret);
-    setPayload(inner);
+    await setPayload(inner);
     const verification = inner.data?.verification ?? {};
     console.log(
       '[webhook] stored payload',

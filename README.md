@@ -84,6 +84,8 @@ The **webhook is the source of truth** — Beige Bank never parses or trusts the
 | `NEXT_PUBLIC_POLYGUARD_SDK_URL` | Browser | Overrides the SDK CDN URL. Defaults to `https://cdn.polyguard.ai/sdk/latest/sdk.js`. |
 | `POLYGUARD_WEBHOOK_SECRET` | **Server only** | 32-byte base64 AES-256-GCM key from the Polyguard app dashboard. |
 | `POLYGUARD_AFFIDAVIT_HOST_ALLOWLIST` | Server | Comma-separated host allow-list for the affidavit presigned URL. |
+| `UPSTASH_REDIS_REST_URL` | **Server only** | Upstash Redis REST URL. Required on Vercel — see "Why Upstash" below. |
+| `UPSTASH_REDIS_REST_TOKEN` | **Server only** | Upstash Redis REST token. |
 
 See `.env.example` for working defaults.
 
@@ -103,11 +105,17 @@ pnpm format            # Prettier
 
 ---
 
+## Why Upstash Redis?
+
+The `/api/webhook` handler and the `/api/status` + `/admin/affidavit` routes are **separate serverless functions on Vercel** — they cannot share a module-scoped in-memory `Map`. The Polyguard webhook would land in one function's memory and be invisible to every other route. We use Upstash Redis (free tier) as a tiny bridge: webhook writes, other routes read. Provision takes 60 seconds at [console.upstash.com](https://console.upstash.com); paste the REST URL and token into Vercel.
+
+If you skip Upstash, the demo falls back to a per-function in-memory `Map`. That's fine for `next dev` (one process), but on Vercel the affidavit view will silently fail to surface webhook data.
+
 ## Productionizing this demo
 
 This repo is deliberately minimal. Before shipping anything like this to real customers:
 
-- **Persistence.** The webhook store is an in-process `Map`. Vercel cold starts clear it. Replace with a tamper-evident store (DynamoDB, Postgres with row-level integrity).
+- **Persistence.** Upstash Redis is sized for a demo (30-minute TTL, no replication). Real workloads want a tamper-evident store (DynamoDB, Postgres with row-level integrity, append-only audit log).
 - **IDOR.** `/api/status/:linkUuid` is unauthenticated — the link UUID is opaque but anyone with it can read the webhook. Production should require a session or signed cookie tying the requesting user to the link.
 - **SSRF / open redirect.** The `affidavit_url` host allow-list in `lib/affidavit-url.ts` is the only defense against a hostile webhook signer. Keep it tight; review it when Polyguard adds new storage backends.
 - **Webhook idempotency.** `setPayload` is naive last-write-wins. For real workloads, dedupe by `(link_uuid, timestamp)` and emit your own deterministic outbox event.

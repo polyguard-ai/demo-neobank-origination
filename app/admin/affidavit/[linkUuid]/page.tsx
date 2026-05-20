@@ -14,7 +14,7 @@ export default async function AffidavitPage({
   params: Promise<{ linkUuid: string }>;
 }) {
   const { linkUuid } = await params;
-  const payload = getPayload(linkUuid);
+  const payload = await getPayload(linkUuid);
   const allowlist = getAllowlist();
 
   return (
