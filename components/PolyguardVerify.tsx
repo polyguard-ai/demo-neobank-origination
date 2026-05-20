@@ -59,7 +59,7 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
           apiServer: POLYGUARD_API_SERVER,
           requiredProofs:
             mode === 'kyc' ? REQUIRED_PROOFS_FOR_KYC : REQUIRED_PROOFS_FOR_REVERIFY,
-          scanType: 'single',
+          scanType: 'multi',
         });
 
         setPhase('awaiting-scan');
