@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Lattice } from './Lattice';
+import { ResetSessionButton } from './ResetSessionButton';
 
 export function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="font-serif text-lg tracking-tight">Beige Bank</span>
           </Link>
           <nav className="flex items-center gap-1 sm:gap-3 text-sm">
+            <ResetSessionButton />
             <Link
               href="/compare"
               className="px-3 py-2 rounded-md hover:bg-beige-dark transition-colors text-charcoal-soft hover:text-charcoal"
@@ -18,7 +20,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             >
               Why Beige
             </Link>
-            <Link href="/apply" className="btn-primary text-xs px-3 py-2" data-tap>
+            <Link href="/verify" className="btn-primary text-xs px-3 py-2" data-tap>
               Open account
             </Link>
           </nav>

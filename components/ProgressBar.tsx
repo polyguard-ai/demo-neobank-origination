@@ -1,26 +1,70 @@
 'use client';
 import Link from 'next/link';
 import { clsx } from 'clsx';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { useAppStore, useHasHydrated } from '@/lib/state';
 
-const STOPS = [
-  { slug: 'landing', label: 'Welcome', href: '/' },
+type Stop = { slug: string; label: string; href: string };
+
+const STOPS: Stop[] = [
   { slug: 'verify', label: 'Verify', href: '/verify' },
   { slug: 'verified', label: 'Verified', href: '/verified' },
   { slug: 'apply', label: 'Confirm', href: '/apply' },
   { slug: 'fund', label: 'Fund', href: '/fund' },
   { slug: 'affidavit', label: 'Affidavit', href: '#' },
-  { slug: 'compare', label: 'Compare', href: '/compare' },
 ];
 
 export function ProgressBar({ current }: { current: string }) {
+  const hasHydrated = useHasHydrated();
+  const verification = useAppStore((s) => s.verification);
+  const applicantEmail = useAppStore((s) => s.applicant.email);
+  const account = useAppStore((s) => s.account);
+
+  // A step is "completed" when the work it represents has been done.
+  // Reachability of step N then requires step N-1 to be completed.
+  // Pre-hydration we treat everything as locked except the current step,
+  // so we never render a clickable link to something we'd punt back from.
+  const completed = (slug: string): boolean => {
+    if (!hasHydrated) return false;
+    switch (slug) {
+      case 'verify':
+      case 'verified':
+        return !!verification;
+      case 'apply':
+        return !!applicantEmail;
+      case 'fund':
+        return !!account;
+      default:
+        return false;
+    }
+  };
+
   const currentIndex = STOPS.findIndex((s) => s.slug === current);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
   const currentStop = STOPS[safeIndex];
+
+  const reachable = (i: number): boolean => {
+    if (i === safeIndex) return true;
+    if (i === 0) return true;
+    return completed(STOPS[i - 1].slug);
+  };
+
+  const hrefFor = (stop: Stop): string => {
+    if (stop.slug === 'affidavit') {
+      return verification?.linkUuid
+        ? `/admin/affidavit/${verification.linkUuid}`
+        : '#';
+    }
+    return stop.href;
+  };
+
   const prevStop = STOPS[safeIndex - 1];
   const nextStop = STOPS[safeIndex + 1];
-  const prevEnabled = !!prevStop && prevStop.href !== '#';
-  const nextEnabled = !!nextStop && nextStop.href !== '#';
+  const prevReachable =
+    !!prevStop && reachable(safeIndex - 1) && hrefFor(prevStop) !== '#';
+  const nextReachable =
+    !!nextStop && reachable(safeIndex + 1) && hrefFor(nextStop) !== '#';
+
   return (
     <nav
       aria-label="Account opening progress"
@@ -31,7 +75,8 @@ export function ProgressBar({ current }: { current: string }) {
         <StepArrow
           direction="prev"
           stop={prevStop}
-          enabled={prevEnabled}
+          href={prevStop ? hrefFor(prevStop) : '#'}
+          enabled={prevReachable}
         />
         <div className="flex-1 min-w-0 flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -50,7 +95,8 @@ export function ProgressBar({ current }: { current: string }) {
         <StepArrow
           direction="next"
           stop={nextStop}
-          enabled={nextEnabled}
+          href={nextStop ? hrefFor(nextStop) : '#'}
+          enabled={nextReachable}
         />
       </div>
       {/* Desktop — labeled */}
@@ -58,23 +104,49 @@ export function ProgressBar({ current }: { current: string }) {
         {STOPS.map((stop, i) => {
           const isActive = i === safeIndex;
           const isPast = i < safeIndex;
+          const stopHref = hrefFor(stop);
+          const isLink = !isActive && reachable(i) && stopHref !== '#';
+          const isLocked = !isLink && !isActive;
+          const contents = (
+            <>
+              <span className="font-mono text-[0.7rem] opacity-70">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span>{stop.label}</span>
+              {isLocked && (
+                <Lock className="h-3 w-3 opacity-50" aria-hidden />
+              )}
+            </>
+          );
           return (
             <li key={stop.slug} className="flex items-center gap-2">
-              <Link
-                href={stop.href === '#' ? '#' : stop.href}
-                aria-current={isActive ? 'step' : undefined}
-                className={clsx(
-                  'flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md transition-colors',
-                  isActive && 'bg-charcoal text-beige-light',
-                  isPast && 'text-sage-strong hover:bg-sage-soft/40',
-                  !isActive && !isPast && 'text-charcoal-soft hover:bg-beige-dark',
-                )}
-              >
-                <span className="font-mono text-[0.7rem] opacity-70">
-                  {String(i + 1).padStart(2, '0')}
+              {isLink ? (
+                <Link
+                  href={stopHref}
+                  aria-current={isActive ? 'step' : undefined}
+                  className={clsx(
+                    'flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md transition-colors',
+                    isPast
+                      ? 'text-sage-strong hover:bg-sage-soft/40'
+                      : 'text-charcoal-soft hover:bg-beige-dark',
+                  )}
+                >
+                  {contents}
+                </Link>
+              ) : (
+                <span
+                  aria-current={isActive ? 'step' : undefined}
+                  aria-disabled={!isActive || undefined}
+                  title={isLocked ? 'Complete the previous step to unlock' : undefined}
+                  className={clsx(
+                    'flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md',
+                    isActive && 'bg-charcoal text-beige-light',
+                    isLocked && 'text-charcoal/40 cursor-not-allowed',
+                  )}
+                >
+                  {contents}
                 </span>
-                <span>{stop.label}</span>
-              </Link>
+              )}
               {i < STOPS.length - 1 && (
                 <span className="text-charcoal/20 select-none" aria-hidden>
                   ·
@@ -91,10 +163,12 @@ export function ProgressBar({ current }: { current: string }) {
 function StepArrow({
   direction,
   stop,
+  href,
   enabled,
 }: {
   direction: 'prev' | 'next';
-  stop: (typeof STOPS)[number] | undefined;
+  stop: Stop | undefined;
+  href: string;
   enabled: boolean;
 }) {
   const Icon = direction === 'prev' ? ChevronLeft : ChevronRight;
@@ -120,7 +194,7 @@ function StepArrow({
     );
   }
   return (
-    <Link href={stop.href} aria-label={label} className={className} data-tap>
+    <Link href={href} aria-label={label} className={className} data-tap>
       <Icon className="h-5 w-5" aria-hidden />
     </Link>
   );
