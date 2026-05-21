@@ -3,7 +3,7 @@ import { ComparisonTable } from '@/components/ComparisonTable';
 
 export default function ComparePage() {
   return (
-    <PageWithDocs slug="compare">
+    <PageWithDocs slug="compare" showProgress={false}>
       <section className="mx-auto max-w-5xl px-4 sm:px-6 py-8 sm:py-12">
         <h1 className="font-serif text-3xl sm:text-4xl text-charcoal">
           One-time KYC vs. continuous verification
