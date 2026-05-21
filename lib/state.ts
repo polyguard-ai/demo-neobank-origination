@@ -29,11 +29,14 @@ type AppState = {
   verification?: VerificationSnapshot;
   account?: { accountNumber: string; routing: string; txId: string };
   docsCollapsed: boolean;
+  /** True once zustand has finished rehydrating from localStorage. */
+  _hasHydrated: boolean;
   setApplicant: (patch: Partial<Applicant>) => void;
   setVerification: (v: VerificationSnapshot) => void;
   setAccount: (a: { accountNumber: string; routing: string; txId: string }) => void;
   toggleDocs: () => void;
   setDocsCollapsed: (collapsed: boolean) => void;
+  setHasHydrated: (h: boolean) => void;
   reset: () => void;
 };
 
@@ -42,11 +45,13 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       applicant: {},
       docsCollapsed: false,
+      _hasHydrated: false,
       setApplicant: (patch) => set((s) => ({ applicant: { ...s.applicant, ...patch } })),
       setVerification: (verification) => set({ verification }),
       setAccount: (account) => set({ account }),
       toggleDocs: () => set((s) => ({ docsCollapsed: !s.docsCollapsed })),
       setDocsCollapsed: (docsCollapsed) => set({ docsCollapsed }),
+      setHasHydrated: (h) => set({ _hasHydrated: h }),
       reset: () => set({ applicant: {}, verification: undefined, account: undefined }),
     }),
     {
@@ -58,6 +63,12 @@ export const useAppStore = create<AppState>()(
         account: s.account,
         docsCollapsed: s.docsCollapsed,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );
+
+/** Subscribe to whether the persisted store has finished loading from localStorage. */
+export const useHasHydrated = () => useAppStore((s) => s._hasHydrated);

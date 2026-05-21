@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageWithDocs } from '@/components/PageWithDocs';
 import { TrustCheckBadge } from '@/components/TrustCheckBadge';
-import { useAppStore } from '@/lib/state';
+import { useAppStore, useHasHydrated } from '@/lib/state';
 import { CheckCircle2 } from 'lucide-react';
 
 function splitFullName(full: string | undefined): { firstName: string; lastName: string } {
@@ -15,6 +15,7 @@ function splitFullName(full: string | undefined): { firstName: string; lastName:
 
 export default function ApplyPage() {
   const router = useRouter();
+  const hasHydrated = useHasHydrated();
   const verification = useAppStore((s) => s.verification);
   const setApplicant = useAppStore((s) => s.setApplicant);
   const applicant = useAppStore((s) => s.applicant);
@@ -24,10 +25,10 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!verification) router.replace('/verify');
-  }, [verification, router]);
+    if (hasHydrated && !verification) router.replace('/verify');
+  }, [hasHydrated, verification, router]);
 
-  if (!verification) return null;
+  if (!hasHydrated || !verification) return null;
 
   const v = (verification.verification ?? {}) as Record<string, unknown>;
   const fullName = (v.full_name as string | undefined) ?? '';

@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { clsx } from 'clsx';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const STOPS = [
   { slug: 'landing', label: 'Welcome', href: '/' },
@@ -16,23 +17,41 @@ export function ProgressBar({ current }: { current: string }) {
   const currentIndex = STOPS.findIndex((s) => s.slug === current);
   const safeIndex = currentIndex === -1 ? 0 : currentIndex;
   const currentStop = STOPS[safeIndex];
+  const prevStop = STOPS[safeIndex - 1];
+  const nextStop = STOPS[safeIndex + 1];
+  const prevEnabled = !!prevStop && prevStop.href !== '#';
+  const nextEnabled = !!nextStop && nextStop.href !== '#';
   return (
     <nav
       aria-label="Account opening progress"
       className="border-b border-charcoal/10 bg-beige-light/70 backdrop-blur"
     >
-      {/* Mobile — compact */}
-      <div className="md:hidden mx-auto max-w-7xl px-4 py-3 flex items-center gap-3">
-        <span className="text-[0.7rem] uppercase tracking-wider text-charcoal-soft whitespace-nowrap">
-          Step {safeIndex + 1} of {STOPS.length}
-        </span>
-        <div className="flex-1 h-1.5 rounded-full bg-beige-dark overflow-hidden">
-          <div
-            className="h-full bg-sage-strong rounded-full transition-all"
-            style={{ width: `${((safeIndex + 1) / STOPS.length) * 100}%` }}
-          />
+      {/* Mobile — compact, with prev/next */}
+      <div className="md:hidden mx-auto max-w-7xl px-3 py-3 flex items-center gap-2">
+        <StepArrow
+          direction="prev"
+          stop={prevStop}
+          enabled={prevEnabled}
+        />
+        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[0.7rem] uppercase tracking-wider text-charcoal-soft whitespace-nowrap">
+              Step {safeIndex + 1} of {STOPS.length}
+            </span>
+            <span className="text-sm font-medium truncate">{currentStop.label}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-beige-dark overflow-hidden">
+            <div
+              className="h-full bg-sage-strong rounded-full transition-all"
+              style={{ width: `${((safeIndex + 1) / STOPS.length) * 100}%` }}
+            />
+          </div>
         </div>
-        <span className="text-sm font-medium">{currentStop.label}</span>
+        <StepArrow
+          direction="next"
+          stop={nextStop}
+          enabled={nextEnabled}
+        />
       </div>
       {/* Desktop — labeled */}
       <ol className="hidden md:flex mx-auto max-w-7xl px-6 lg:px-8 py-3 items-center gap-1">
@@ -66,5 +85,43 @@ export function ProgressBar({ current }: { current: string }) {
         })}
       </ol>
     </nav>
+  );
+}
+
+function StepArrow({
+  direction,
+  stop,
+  enabled,
+}: {
+  direction: 'prev' | 'next';
+  stop: (typeof STOPS)[number] | undefined;
+  enabled: boolean;
+}) {
+  const Icon = direction === 'prev' ? ChevronLeft : ChevronRight;
+  const label =
+    direction === 'prev'
+      ? stop
+        ? `Previous step: ${stop.label}`
+        : 'No previous step'
+      : stop
+      ? `Next step: ${stop.label}`
+      : 'No next step';
+  const className = clsx(
+    'shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-md transition-colors',
+    enabled
+      ? 'text-charcoal hover:bg-beige-dark active:bg-beige-dark/80'
+      : 'text-charcoal/25 cursor-not-allowed',
+  );
+  if (!enabled || !stop) {
+    return (
+      <span aria-label={label} aria-disabled className={className}>
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
+    );
+  }
+  return (
+    <Link href={stop.href} aria-label={label} className={className} data-tap>
+      <Icon className="h-5 w-5" aria-hidden />
+    </Link>
   );
 }

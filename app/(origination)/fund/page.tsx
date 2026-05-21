@@ -4,11 +4,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageWithDocs } from '@/components/PageWithDocs';
 import { PolyguardVerify } from '@/components/PolyguardVerify';
-import { useAppStore } from '@/lib/state';
+import { useAppStore, useHasHydrated } from '@/lib/state';
 import { TrustCheckBadge } from '@/components/TrustCheckBadge';
 
 export default function FundPage() {
   const router = useRouter();
+  const hasHydrated = useHasHydrated();
   const verification = useAppStore((s) => s.verification);
   const account = useAppStore((s) => s.account);
   const setAccount = useAppStore((s) => s.setAccount);
@@ -16,8 +17,8 @@ export default function FundPage() {
   const [amount, setAmount] = useState('500');
 
   useEffect(() => {
-    if (!verification) router.replace('/verify');
-  }, [verification, router]);
+    if (hasHydrated && !verification) router.replace('/verify');
+  }, [hasHydrated, verification, router]);
 
   useEffect(() => {
     async function ensureAccount() {
@@ -32,7 +33,7 @@ export default function FundPage() {
     ensureAccount();
   }, [step, account, verification, setAccount]);
 
-  if (!verification) return null;
+  if (!hasHydrated || !verification) return null;
 
   return (
     <PageWithDocs slug="fund">

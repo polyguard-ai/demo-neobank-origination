@@ -90,4 +90,9 @@ export const REQUIRED_PROOFS_FOR_KYC = [
   'pg_region',
 ];
 
-export const REQUIRED_PROOFS_FOR_REVERIFY = ['pg_presence', 'pg_attestation_key_id'];
+export const REQUIRED_PROOFS_FOR_REVERIFY = [
+  'pg_presence',
+  'pg_attestation_key_id',
+  'name',
+  'pg_region',
+];
