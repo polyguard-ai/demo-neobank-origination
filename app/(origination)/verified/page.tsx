@@ -4,19 +4,19 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageWithDocs } from '@/components/PageWithDocs';
 import { TrustCheckBadge } from '@/components/TrustCheckBadge';
-import { useAppStore } from '@/lib/state';
+import { useAppStore, useHasHydrated } from '@/lib/state';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function VerifiedPage() {
   const router = useRouter();
+  const hasHydrated = useHasHydrated();
   const verification = useAppStore((s) => s.verification);
 
   useEffect(() => {
-    if (!verification) {
-      const t = setTimeout(() => router.replace('/verify'), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [verification, router]);
+    if (hasHydrated && !verification) router.replace('/verify');
+  }, [hasHydrated, verification, router]);
+
+  if (!hasHydrated) return null;
 
   if (!verification) {
     return (
@@ -70,7 +70,7 @@ export default function VerifiedPage() {
           {presence?.score !== undefined && (
             <Row
               label="PG-Presence"
-              value={<span className="font-mono">{String(presence.score)}ms</span>}
+              value={<span className="font-mono">{String(presence.score)}</span>}
             />
           )}
           {v.document_type !== undefined && (

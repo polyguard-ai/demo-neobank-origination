@@ -9,13 +9,13 @@ export const meta = {
 
 ## What\'s happening on this page
 
-Before Beige Bank moves any money, we run a second Trust Check — this time with no document scan and no document re-issuance. We just need PG-Presence and device attestation: prove the person is physically at the device they verified with, right now.
+Before Beige Bank moves any money, we run a second Trust Check — this time with no document scan and no document re-issuance. We rebind to the original identity by requiring four proofs: PG-Presence and device attestation prove the person is physically at the device they verified with, while `name` and `pg_region` lock the re-verification to the same human and the same region as the KYC bundle.
 
 ```tsx
 const reverify = new PolyguardClient({
   appId: process.env.NEXT_PUBLIC_POLYGUARD_APP_ID,
   apiServer: 'api.polyguard.ai',
-  requiredProofs: ['pg_presence', 'pg_attestation_key_id'],
+  requiredProofs: ['pg_presence', 'pg_attestation_key_id', 'name', 'pg_region'],
   scanType: 'single',
 });
 await reverify.verify('pg-qr-target', true);

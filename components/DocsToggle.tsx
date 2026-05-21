@@ -1,10 +1,12 @@
 'use client';
 import { BookOpen, X } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useAppStore } from '@/lib/state';
+import { useAppStore, useHasHydrated } from '@/lib/state';
 
 export function DocsToggle({ mode }: { mode: 'mobile' | 'tablet' | 'rail' }) {
-  const collapsed = useAppStore((s) => s.docsCollapsed);
+  const hasHydrated = useHasHydrated();
+  const persistedCollapsed = useAppStore((s) => s.docsCollapsed);
+  const collapsed = hasHydrated ? persistedCollapsed : true;
   const toggle = useAppStore((s) => s.toggleDocs);
 
   if (mode === 'rail') {

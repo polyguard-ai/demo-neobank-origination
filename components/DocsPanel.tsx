@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useAppStore } from '@/lib/state';
+import { useAppStore, useHasHydrated } from '@/lib/state';
 import { useBreakpoint } from '@/lib/use-is-mobile';
 
 export type DocMeta = {
@@ -25,12 +25,16 @@ export function DocsPanel({
   meta: DocMeta;
   children: React.ReactNode;
 }) {
-  const collapsed = useAppStore((s) => s.docsCollapsed);
+  const hasHydrated = useHasHydrated();
+  const persistedCollapsed = useAppStore((s) => s.docsCollapsed);
   const setCollapsed = useAppStore((s) => s.setDocsCollapsed);
   const bp = useBreakpoint();
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Reflect collapsed state on <html> so CSS in globals.css can react before hydration.
+  // Treat the drawer as collapsed until the persisted state is loaded — avoids
+  // a flash of the auto-opened mobile sheet on first render.
+  const collapsed = hasHydrated ? persistedCollapsed : true;
+
   useEffect(() => {
     document.documentElement.dataset.docsCollapsed = collapsed ? 'true' : 'false';
   }, [collapsed]);
