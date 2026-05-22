@@ -49,25 +49,29 @@ export default function ApplyPage() {
           send your statements.
         </p>
 
-        <div className="card mt-8">
-          <div className="flex items-center justify-between">
-            <TrustCheckBadge label="Verified by Polyguard" />
-            <span className="text-[0.7rem] uppercase tracking-wider text-charcoal-soft">
-              From your Trust Check
-            </span>
+        {(firstName || lastName || documentType || issuingCountry || region) && (
+          <div className="card mt-8">
+            <div className="flex items-center justify-between">
+              <TrustCheckBadge label="Verified by Polyguard" />
+              <span className="text-[0.7rem] uppercase tracking-wider text-charcoal-soft">
+                From your Trust Check
+              </span>
+            </div>
+            <dl className="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              {firstName && <VerifiedField label="First name" value={firstName} />}
+              {lastName && <VerifiedField label="Last name" value={lastName} />}
+              {documentType && <VerifiedField label="Document" value={documentType} />}
+              {issuingCountry && (
+                <VerifiedField label="Issuing country" value={issuingCountry} />
+              )}
+              {region && <VerifiedField label="Region" value={region} />}
+            </dl>
+            <p className="mt-4 text-xs text-charcoal-soft">
+              None of this is editable — it&apos;s read from the cryptographic
+              verification, not from form input.
+            </p>
           </div>
-          <dl className="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <VerifiedField label="First name" value={firstName || '—'} />
-            <VerifiedField label="Last name" value={lastName || '—'} />
-            <VerifiedField label="Document" value={documentType || '—'} />
-            <VerifiedField label="Issuing country" value={issuingCountry || '—'} />
-            <VerifiedField label="Region" value={region || '—'} />
-          </dl>
-          <p className="mt-4 text-xs text-charcoal-soft">
-            None of this is editable — it&apos;s read from the cryptographic
-            verification, not from form input.
-          </p>
-        </div>
+        )}
 
         <form
           className="mt-6 card space-y-5"
