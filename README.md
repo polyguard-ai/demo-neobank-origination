@@ -2,7 +2,7 @@
 
 An open-source, end-to-end demo of how [Polyguard](https://polyguard.ai) prevents fraud during neobank account origination. Built in Next.js 15 (App Router), deployed on Vercel.
 
-**Live demo:** _add your deployed URL here_
+**Live demo:** _[https://notabank.dev](https://notabank.dev/)_
 
 **What it shows**
 - A real Polyguard Trust Check at signup — not a mockup.
