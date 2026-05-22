@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore, type VerificationSnapshot } from '@/lib/state';
 import {
@@ -42,6 +42,19 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
     'idle' | 'loading-sdk' | 'awaiting-scan' | 'done' | 'error'
   >('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+
+  // Hold callbacks/strings in refs so the effect that drives the SDK doesn't
+  // re-run (and orphan its WebSocket) when the parent rerenders with a new
+  // inline `onComplete` identity.
+  const onCompleteRef = useRef(onComplete);
+  const redirectToRef = useRef(redirectTo);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+  useEffect(() => {
+    redirectToRef.current = redirectTo;
+  }, [redirectTo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,10 +111,11 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
           verification: bundle.verification,
         };
         setVerification(snapshot);
-        onComplete?.(snapshot);
+        onCompleteRef.current?.(snapshot);
         setPhase('done');
 
-        if (redirectTo) router.push(redirectTo);
+        const redirect = redirectToRef.current;
+        if (redirect) router.push(redirect);
       } catch (err: unknown) {
         if (cancelled) return;
         const msg =
@@ -120,7 +134,7 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [mode, redirectTo, onComplete, router, setVerification]);
+  }, [mode, router, setVerification, retryToken]);
 
   const showOverlay =
     phase === 'idle' || phase === 'loading-sdk' || phase === 'done' || phase === 'error';
@@ -173,7 +187,11 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
             <p className="mt-1 text-xs">{errorMessage}</p>
             <button
               type="button"
-              onClick={() => setPhase('idle')}
+              onClick={() => {
+                setErrorMessage(null);
+                setPhase('idle');
+                setRetryToken((n) => n + 1);
+              }}
               className="mt-3 btn-secondary text-xs"
               data-tap
             >
