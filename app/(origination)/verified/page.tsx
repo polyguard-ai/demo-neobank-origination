@@ -67,19 +67,19 @@ export default function VerifiedPage() {
               value={<span className="font-mono">{formatCertainty(certainty)}</span>}
             />
           )}
-          {presence?.score !== undefined && (
+          {presence?.score !== undefined && presence.score !== '' && (
             <Row
               label="PG-Presence"
               value={<span className="font-mono">{String(presence.score)}</span>}
             />
           )}
-          {v.document_type !== undefined && (
-            <Row label="Document" value={String(v.document_type ?? '')} />
-          )}
-          {v.issuing_country !== undefined && (
-            <Row label="Issuing country" value={String(v.issuing_country ?? '')} />
-          )}
-          {v.region !== undefined && <Row label="Region" value={String(v.region ?? '')} />}
+          {v.document_type ? (
+            <Row label="Document" value={String(v.document_type)} />
+          ) : null}
+          {v.issuing_country ? (
+            <Row label="Issuing country" value={String(v.issuing_country)} />
+          ) : null}
+          {v.region ? <Row label="Region" value={String(v.region)} /> : null}
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3">

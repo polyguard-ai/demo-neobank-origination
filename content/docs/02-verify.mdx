@@ -1,5 +1,5 @@
 export const meta = {
-  stepNumber: 2,
+  stepNumber: 1,
   title: 'The Trust Check',
   summary: 'Four lines of code, four factors of identity. This is where Polyguard does its work — before we ask the customer to type anything.',
   links: [
@@ -10,14 +10,12 @@ export const meta = {
 
 ## What\'s happening on this page
 
-The page mounts a single client component that loads the Polyguard SDK from `https://cdn.polyguard.ai/sdk/latest/sdk.js` and calls `client.verify()`. On desktop it renders a QR code. On mobile it offers a deep link straight into Polyguard Mobile.
-
-```html
-<script src="https://cdn.polyguard.ai/sdk/latest/sdk.js"></script>
-```
+The page mounts a single client component that dynamically imports `@polyguard/sdk` and calls `client.verify()`. On desktop it renders a QR code. On mobile it offers a deep link straight into Polyguard Mobile.
 
 ```tsx
-const client = new window.Polyguard.Client({
+const { PolyguardClient } = await import('@polyguard/sdk');
+
+const client = new PolyguardClient({
   appId: process.env.NEXT_PUBLIC_POLYGUARD_APP_ID,
   apiServer: 'api.polyguard.ai',
   requiredProofs: ['name', 'pg_presence', 'pg_attestation_key_id', 'pg_region'],
@@ -27,7 +25,7 @@ const client = new window.Polyguard.Client({
 const response = await client.verify('pg-qr-target', /* rawJwt */ true);
 ```
 
-That's the whole integration on the browser side. (You can also `npm install @polyguard/sdk` if you'd rather bundle.)
+That's the whole integration on the browser side. The dynamic `import()` keeps the SDK (and its pre-bundled deps — qrcode, reconnecting-websocket, superagent) out of the initial page chunk and out of SSR.
 
 ## What Polyguard Mobile does
 
