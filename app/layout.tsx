@@ -51,6 +51,11 @@ const PRE_HYDRATION_SCRIPT = `
 })();
 `.trim();
 
+const PLAUSIBLE_INIT_SCRIPT = `
+window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+plausible.init()
+`.trim();
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -59,6 +64,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: PRE_HYDRATION_SCRIPT }} />
+        {/* Privacy-friendly analytics by Plausible */}
+        <script
+          async
+          src="https://plausible.io/js/pa-zqFP9sFzCVUS-QeI3GUXu.js"
+        />
+        <script dangerouslySetInnerHTML={{ __html: PLAUSIBLE_INIT_SCRIPT }} />
       </head>
       <body>{children}</body>
     </html>
