@@ -74,7 +74,10 @@ export default async function AffidavitPage({
                   />
                   {payload.data?.verification &&
                     Object.entries(payload.data.verification)
-                      .filter(([k]) => !['photo_verification_url'].includes(k))
+                      .filter(
+                        ([k, v]) =>
+                          !['photo_verification_url'].includes(k) && hasValue(v),
+                      )
                       .map(([k, v]) => (
                         <DetailRow
                           key={k}
@@ -119,8 +122,15 @@ function prettyKey(k: string): string {
     .replace(/\b(\w)/g, (m) => m.toUpperCase());
 }
 
+function hasValue(v: unknown): boolean {
+  if (v === null || v === undefined) return false;
+  if (typeof v === 'string') return v.trim() !== '';
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v === 'object') return Object.keys(v as object).length > 0;
+  return true;
+}
+
 function formatValue(v: unknown): string {
-  if (v === null || v === undefined) return '—';
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
