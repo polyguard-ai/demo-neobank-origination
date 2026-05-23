@@ -1,61 +1,41 @@
 'use client';
-import { POLYGUARD_SDK_URL, type PolyguardClientConstructor } from './polyguard';
+import type { PolyguardClientConstructor } from './polyguard';
 
 let cached: Promise<PolyguardClientConstructor> | null = null;
 
 /**
- * Idempotently loads the Polyguard IIFE bundle from the public CDN and
- * resolves with the `window.Polyguard.Client` constructor.
+ * Dynamically imports the `@polyguard/sdk` npm package and returns the
+ * `PolyguardClient` constructor. The dynamic import keeps the SDK (and its
+ * pre-bundled deps — qrcode, reconnecting-websocket, superagent) out of the
+ * initial page chunk and out of SSR (the SDK touches `window` at import
+ * time).
+ *
+ * Cached so the second `verify()` call doesn't re-import the module.
  */
 export function loadPolyguardClient(): Promise<PolyguardClientConstructor> {
   if (cached) return cached;
-  cached = new Promise<PolyguardClientConstructor>((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      reject(new Error('Polyguard SDK can only be loaded in the browser.'));
-      return;
-    }
-    if (window.Polyguard?.Client) {
-      resolve(window.Polyguard.Client);
-      return;
-    }
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[data-polyguard-sdk]`,
+  if (typeof window === 'undefined') {
+    return Promise.reject(
+      new Error('Polyguard SDK can only be loaded in the browser.'),
     );
-    const finish = () => {
-      if (window.Polyguard?.Client) resolve(window.Polyguard.Client);
-      else reject(new Error('Polyguard SDK loaded but window.Polyguard.Client is missing.'));
-    };
-    if (existing) {
-      if (existing.dataset.loaded === 'true') return finish();
-      existing.addEventListener('load', finish, { once: true });
-      existing.addEventListener(
-        'error',
-        () => reject(new Error('Polyguard SDK script failed to load.')),
-        { once: true },
+  }
+  cached = import('@polyguard/sdk').then((mod) => {
+    const Client = (mod.PolyguardClient ??
+      (mod as unknown as { default?: PolyguardClientConstructor }).default) as
+      | PolyguardClientConstructor
+      | undefined;
+    if (!Client) {
+      cached = null;
+      throw new Error(
+        '@polyguard/sdk loaded but PolyguardClient export is missing.',
       );
-      return;
     }
-    const script = document.createElement('script');
-    script.src = POLYGUARD_SDK_URL;
-    script.async = true;
-    // Do NOT set crossOrigin — the Polyguard CDN does not send CORS headers,
-    // and setting crossOrigin would force the browser to enforce them and
-    // block the script. The IIFE bundle works fine as a regular cross-origin
-    // script (we don't need to inspect its content from JS).
-    script.dataset.polyguardSdk = '';
-    script.addEventListener('load', () => {
-      script.dataset.loaded = 'true';
-      finish();
-    }, { once: true });
-    script.addEventListener(
-      'error',
-      () => {
-        cached = null;
-        reject(new Error('Polyguard SDK script failed to load.'));
-      },
-      { once: true },
-    );
-    document.head.appendChild(script);
+    return Client;
+  });
+  // If the dynamic import itself fails (e.g. transient network during a CSR
+  // chunk fetch), invalidate the cache so the next call retries.
+  cached.catch(() => {
+    cached = null;
   });
   return cached;
 }

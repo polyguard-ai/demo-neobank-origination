@@ -14,7 +14,7 @@ The Polyguard browser SDK source lives in `polyguard-ai/web-sdk`. If you're work
 
 - `verify(target, rawJwt)` — `target` is a DOM element id. Embedded mode.
 - `verify()` with no target — SDK appends its own full-screen modal to `document.body`. Cancel rejects with `new Error('User cancelled')`. Server errors don't reject; they resolve with `{ presence: { score: 'OFFLINE', msg } }`.
-- The SDK is published two ways: ESM (`@polyguard/sdk`) and IIFE (`https://cdn.polyguard.ai/sdk/latest/sdk.js`). This demo uses the CDN IIFE so forkers don't need a private npm registry.
+- The SDK is published two ways: ESM (`@polyguard/sdk`) and IIFE (`https://cdn.polyguard.ai/sdk/latest/sdk.js`). This demo depends on the ESM npm package and dynamic-imports it at runtime — see `lib/load-polyguard.ts`. The CDN IIFE is still available for forkers who'd rather drop in a `<script>` tag.
 
 ## High-level architecture
 

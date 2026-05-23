@@ -81,7 +81,6 @@ The **webhook is the source of truth** — Beige Bank never parses or trusts the
 |---|---|---|
 | `NEXT_PUBLIC_POLYGUARD_APP_ID` | Browser + server | Your Polyguard sandbox app id. Browser-exposed (not secret). |
 | `NEXT_PUBLIC_POLYGUARD_API_SERVER` | Browser + server | Defaults to `api.polyguard.ai`. |
-| `NEXT_PUBLIC_POLYGUARD_SDK_URL` | Browser | Overrides the SDK CDN URL. Defaults to `https://cdn.polyguard.ai/sdk/latest/sdk.js`. |
 | `POLYGUARD_WEBHOOK_SECRET` | **Server only** | 32-byte base64 AES-256-GCM key from the Polyguard app dashboard. |
 | `POLYGUARD_AFFIDAVIT_HOST_ALLOWLIST` | Server | Comma-separated host allow-list for the affidavit presigned URL. |
 | `UPSTASH_REDIS_REST_URL` | **Server only** | Upstash Redis REST URL. Required on Vercel — see "Why Upstash" below. |

@@ -1,19 +1,13 @@
 /**
- * Polyguard browser SDK is loaded from Polyguard's public CDN as an IIFE
- * bundle, which exposes `window.Polyguard.Client`. We deliberately avoid the
- * npm package so that this demo can be forked and deployed by customers who
- * don't have access to private Polyguard package registries.
- *
- * See `lib/load-polyguard.ts` for the script loader.
+ * Polyguard browser SDK ships as `@polyguard/sdk` on npm. We bundle it via
+ * a dynamic `import()` (see `lib/load-polyguard.ts`) so it lands in a
+ * client chunk rather than the initial bundle, and to keep its `window`
+ * references away from SSR.
  */
 export const POLYGUARD_APP_ID =
   process.env.NEXT_PUBLIC_POLYGUARD_APP_ID || 'demo-beige-bank';
 export const POLYGUARD_API_SERVER =
   process.env.NEXT_PUBLIC_POLYGUARD_API_SERVER || 'api.polyguard.ai';
-
-export const POLYGUARD_SDK_URL =
-  process.env.NEXT_PUBLIC_POLYGUARD_SDK_URL ||
-  'https://cdn.polyguard.ai/sdk/latest/sdk.js';
 
 /**
  * Shape of the resolved value from `client.verify(target, rawJwt = true)`.
