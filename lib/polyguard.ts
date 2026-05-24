@@ -45,14 +45,28 @@ export type PolyguardVerifyResponse = {
 
 /**
  * Extract the link_uuid from a verify() response. The SDK doesn't surface
- * link_uuid directly, but the backend embeds it as the last path segment of
- * `redirect_url` — `/success/{link_uuid}`.
+ * link_uuid directly, but the backend appends it as a ``?link_uuid=…``
+ * query parameter on whatever redirect URL it sends back (the customer's
+ * own next-step page or the default ``/success/by-app/{app_id}``).
+ *
+ * Falls back to the legacy ``/success/{link_uuid}`` path pattern for
+ * older backends that don't yet append the query.
  */
 export function extractLinkUuid(response: PolyguardVerifyResponse): string | undefined {
   const redirect = response?.jwt?.redirect_url;
   if (!redirect || typeof redirect !== 'string') return undefined;
+  try {
+    const u = new URL(redirect);
+    const fromQuery = u.searchParams.get('link_uuid');
+    if (fromQuery) return fromQuery;
+  } catch {
+    // Relative or malformed URL — fall through to the legacy path match.
+  }
   const m = redirect.match(/\/success\/([^/?#]+)/);
-  return m?.[1];
+  // Guard against matching ``by-app`` in the new default ``/success/by-app/{app_id}``
+  // pattern, where that segment is the app_id, not a link_uuid.
+  if (m?.[1] && m[1] !== 'by-app') return m[1];
+  return undefined;
 }
 
 export type PolyguardClientConstructor = new (config: {
