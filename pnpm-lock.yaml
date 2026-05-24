@@ -18,8 +18,8 @@ importers:
         specifier: ^15.0.3
         version: 15.5.18(@mdx-js/loader@3.1.1)(@mdx-js/react@3.1.1(@types/react@19.2.15)(react@19.2.6))
       '@polyguard/sdk':
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.5.2
+        version: 1.5.2
       '@types/mdx':
         specifier: ^2.0.13
         version: 2.0.13
@@ -587,8 +587,8 @@ packages:
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
 
-  '@polyguard/sdk@1.5.1':
-    resolution: {integrity: sha512-DuWVIS172sIiIrvl3wh6baCcNTtpFXZO/lMY20HHHFJQPSEAuTwhUAtlJxBoMD15veuC84dLX6YmxrGjv51q1g==}
+  '@polyguard/sdk@1.5.2':
+    resolution: {integrity: sha512-7u2JYhd7qf84kGl6YVlqiXeB9eKW2XXprPIJQ7W+Tn56howyafl3KZsT1UOAgXaEN+WC4OcVwps8qXM6VaqVqw==}
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
@@ -3057,7 +3057,7 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
 
-  '@polyguard/sdk@1.5.1':
+  '@polyguard/sdk@1.5.2':
     dependencies:
       qrcode: 1.5.4
       reconnecting-websocket: 4.4.0
