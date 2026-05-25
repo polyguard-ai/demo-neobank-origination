@@ -15,7 +15,11 @@ export default function VerifyPage() {
           deep-link straight in.
         </p>
         <div className="mt-8">
-          <PolyguardVerify mode="kyc" redirectTo="/verified" />
+          <PolyguardVerify
+            mode="kyc"
+            redirectTo="/verified"
+            redirectPath="/verified"
+          />
         </div>
       </section>
     </PageWithDocs>

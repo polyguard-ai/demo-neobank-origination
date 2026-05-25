@@ -73,7 +73,15 @@ export default function FundPage() {
       // The SDK's modal owns its UI (QR/button, cancel/close, error toast).
       // verify() resolves only after the user completes on device, or
       // rejects with 'User cancelled' if they close the modal.
-      const snapshot = await runPolyguardVerify({ mode: 'reverify' });
+      //
+      // ``returnToBrowser: true`` — the user is already on /fund; opening
+      // a redirect URL would create a redundant new tab. Tell the mobile
+      // app to show the "tap ← back to your browser" prompt instead, and
+      // let the WebSocket-delivered JWT continue this same-page flow.
+      const snapshot = await runPolyguardVerify({
+        mode: 'reverify',
+        returnToBrowser: true,
+      });
       reverifyLinkUuid.current = snapshot.linkUuid;
       // Stash the SDK snapshot — WebhookEnrichment picks it up and polls
       // /api/status/{linkUuid} until the webhook lands.

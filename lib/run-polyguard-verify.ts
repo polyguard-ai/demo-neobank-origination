@@ -33,6 +33,24 @@ export type VerifyTrigger = {
    * modal mode.
    */
   target?: string;
+  /**
+   * Same-origin path the Polyguard backend appends ``?link_uuid=…`` to and
+   * sends the mobile app to once verification completes. The originating
+   * browser tab is left alive (UL/App-Link interception preserves it) and
+   * the SDK paints a "you may close this tab" overlay over its UI. The
+   * new tab loaded at this path is where the actual customer flow
+   * continues — typically with ``link_uuid`` in the URL driving the
+   * webhook poll. Use this when forwarding the user to a next-step page.
+   */
+  redirectPath?: string;
+  /**
+   * Opt into the mobile "tap ← back to your browser" prompt instead of
+   * opening a redirect URL. Use this for in-line re-verifications (e.g.,
+   * the funding step) where the user is already on the right page and
+   * a new tab would be friction. Mutually exclusive with redirectPath;
+   * the SDK warns and prefers returnToBrowser when both are set.
+   */
+  returnToBrowser?: boolean;
 };
 
 /**
@@ -46,7 +64,7 @@ export type VerifyTrigger = {
  * until the webhook lands.
  */
 export async function runPolyguardVerify(
-  { mode, target }: VerifyTrigger,
+  { mode, target, redirectPath, returnToBrowser }: VerifyTrigger,
 ): Promise<VerificationSnapshot> {
   const Client = await loadPolyguardClient();
   const client = new Client({
@@ -55,6 +73,8 @@ export async function runPolyguardVerify(
     requiredProofs:
       mode === 'kyc' ? REQUIRED_PROOFS_FOR_KYC : REQUIRED_PROOFS_FOR_REVERIFY,
     scanType: 'multi',
+    redirectPath,
+    returnToBrowser,
   });
 
   let response: PolyguardVerifyResponse;

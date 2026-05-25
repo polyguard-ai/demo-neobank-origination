@@ -1,20 +1,54 @@
 'use client';
 import Link from 'next/link';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageWithDocs } from '@/components/PageWithDocs';
 import { TrustCheckBadge } from '@/components/TrustCheckBadge';
 import { useAppStore, useHasHydrated } from '@/lib/state';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function VerifiedPage() {
+  // useSearchParams must be inside a Suspense boundary for Next.js prerender.
+  return (
+    <Suspense fallback={null}>
+      <VerifiedPageInner />
+    </Suspense>
+  );
+}
+
+function VerifiedPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const hasHydrated = useHasHydrated();
   const verification = useAppStore((s) => s.verification);
+  const setVerification = useAppStore((s) => s.setVerification);
 
+  // /verified is reached two ways:
+  //   - Same-tab navigation after the desktop QR-scan flow (verification
+  //     already in the store).
+  //   - New tab opened by Polyguard Mobile after the one-device redirect
+  //     flow, with ``?link_uuid=…`` in the URL but no store state.
+  //
+  // For the second case, bootstrap a minimal SDK-source snapshot so the
+  // layout-level WebhookEnrichment picks it up and starts polling
+  // /api/status/{linkUuid}. The webhook then fills in verification +
+  // affidavit fields. If neither path applies (no store, no link_uuid),
+  // bounce back to /verify.
   useEffect(() => {
-    if (hasHydrated && !verification) router.replace('/verify');
-  }, [hasHydrated, verification, router]);
+    if (!hasHydrated) return;
+    if (verification) return;
+    const linkUuidFromUrl = searchParams.get('link_uuid');
+    if (linkUuidFromUrl) {
+      setVerification({
+        linkUuid: linkUuidFromUrl,
+        source: 'sdk',
+        status: 'success',
+        reason: null,
+      });
+      return;
+    }
+    router.replace('/verify');
+  }, [hasHydrated, verification, searchParams, setVerification, router]);
 
   if (!hasHydrated) return null;
 

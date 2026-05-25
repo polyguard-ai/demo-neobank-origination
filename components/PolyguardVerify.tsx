@@ -12,7 +12,22 @@ import { Loader2 } from 'lucide-react';
 type Props = {
   mode: 'kyc' | 'reverify';
   onComplete?: (snapshot: VerificationSnapshot) => void;
+  /**
+   * Same-tab navigation after the SDK promise resolves. Use for desktop
+   * QR-scan flows where the originating tab is the one that should advance.
+   * Ignored when ``redirectPath`` is set (the new tab opened by PSL takes
+   * over) — except as a fallback for desktop, where the SDK promise still
+   * resolves with the JWT and we navigate the same tab.
+   */
   redirectTo?: string;
+  /**
+   * Forwarded to the SDK. When set, the Polyguard backend appends
+   * ``?link_uuid=…`` and the mobile app opens this same-origin path in a
+   * new tab. The originating tab gets the SDK's "you may close this tab"
+   * overlay. Pair with a destination route that hydrates state from the
+   * URL ``link_uuid`` so the new tab can advance the flow independently.
+   */
+  redirectPath?: string;
 };
 
 /**
@@ -24,7 +39,7 @@ type Props = {
  * and react to the resolved snapshot in the caller. See /fund for the
  * canonical example.
  */
-export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
+export function PolyguardVerify({ mode, onComplete, redirectTo, redirectPath }: Props) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const setVerification = useAppStore((s) => s.setVerification);
@@ -40,12 +55,16 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
   // inline `onComplete` identity.
   const onCompleteRef = useRef(onComplete);
   const redirectToRef = useRef(redirectTo);
+  const redirectPathRef = useRef(redirectPath);
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
   useEffect(() => {
     redirectToRef.current = redirectTo;
   }, [redirectTo]);
+  useEffect(() => {
+    redirectPathRef.current = redirectPath;
+  }, [redirectPath]);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +82,7 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
         const snapshot = await runPolyguardVerify({
           mode,
           target: 'pg-qr-target',
+          redirectPath: redirectPathRef.current,
         });
         if (cancelled) return;
 
@@ -70,8 +90,14 @@ export function PolyguardVerify({ mode, onComplete, redirectTo }: Props) {
         onCompleteRef.current?.(snapshot);
         setPhase('done');
 
+        // Skip the same-tab redirect when ``redirectPath`` is set — the
+        // SDK has already painted its "you may close this tab" overlay
+        // over our target div and the mobile app has opened the
+        // ``redirectPath`` destination in a new tab. Navigating this tab
+        // would wipe the overlay and leave the user on a half-loaded
+        // version of the redirect URL.
         const redirect = redirectToRef.current;
-        if (redirect) router.push(redirect);
+        if (redirect && !redirectPathRef.current) router.push(redirect);
       } catch (err: unknown) {
         if (cancelled) return;
         if (err instanceof PolyguardCancelled) {
