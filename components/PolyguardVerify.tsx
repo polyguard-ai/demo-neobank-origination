@@ -13,11 +13,12 @@ type Props = {
   mode: 'kyc' | 'reverify';
   onComplete?: (snapshot: VerificationSnapshot) => void;
   /**
-   * Same-tab navigation after the SDK promise resolves. Use for desktop
-   * QR-scan flows where the originating tab is the one that should advance.
-   * Ignored when ``redirectPath`` is set (the new tab opened by PSL takes
-   * over) — except as a fallback for desktop, where the SDK promise still
-   * resolves with the JWT and we navigate the same tab.
+   * Same-tab navigation after the SDK promise resolves. The originating tab
+   * always advances here — this is what carries the desktop QR-scan flow
+   * forward (the phone runs the check; this tab's WebSocket resolves and we
+   * navigate it). It fires even when ``redirectPath`` is also set, because
+   * that backend-driven redirect opens on the *phone* in the desktop flow and
+   * therefore can't advance the desktop tab on its own.
    */
   redirectTo?: string;
   /**
@@ -90,14 +91,21 @@ export function PolyguardVerify({ mode, onComplete, redirectTo, redirectPath }: 
         onCompleteRef.current?.(snapshot);
         setPhase('done');
 
-        // Skip the same-tab redirect when ``redirectPath`` is set — the
-        // SDK has already painted its "you may close this tab" overlay
-        // over our target div and the mobile app has opened the
-        // ``redirectPath`` destination in a new tab. Navigating this tab
-        // would wipe the overlay and leave the user on a half-loaded
-        // version of the redirect URL.
+        // Advance the originating tab now that verify() has resolved. This
+        // carries both flows forward: the desktop QR scan (the phone runs the
+        // check; this desktop tab's WebSocket resolves) and the mobile
+        // single-device deep-link round-trip.
+        //
+        // We navigate even when ``redirectPath`` is set. That option asks the
+        // Polyguard backend to ALSO open the destination in a new tab, but in
+        // the desktop QR flow that new tab lands on the *phone* — it can't
+        // advance the desktop tab the customer is actually looking at. Without
+        // this push the originating tab sits on the "Trust Check verified —
+        // continuing…" overlay forever even though the check succeeded and the
+        // webhook poll lands. The layout-level WebhookEnrichment keeps polling
+        // across the navigation and enriches the snapshot on /verified.
         const redirect = redirectToRef.current;
-        if (redirect && !redirectPathRef.current) router.push(redirect);
+        if (redirect) router.push(redirect);
       } catch (err: unknown) {
         if (cancelled) return;
         if (err instanceof PolyguardCancelled) {
