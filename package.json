@@ -24,8 +24,8 @@
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.460.0",
-    "nanoid": "^5.0.9",
-    "next": "^15.0.3",
+    "nanoid": "^5.1.16",
+    "next": "^15.5.23",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "shiki": "^1.24.0",
@@ -40,10 +40,19 @@
     "@types/react-dom": "^19.0.1",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.0.3",
-    "postcss": "^8.4.49",
+    "postcss": "^8.5.26",
     "prettier": "^3.4.1",
     "tailwindcss": "^4.0.0-beta.6",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "brace-expansion@1": "^1.1.16",
+      "brace-expansion@5": "^5.0.7",
+      "esbuild": "^0.28.1",
+      "js-yaml@3": "^3.15.1",
+      "js-yaml@4": "^4.3.1"
+    }
   }
 }
